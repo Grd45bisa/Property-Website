@@ -1,0 +1,92 @@
+import React from 'react';
+import './Process.css';
+
+interface ProcessStep {
+    number: number;
+    icon: string;
+    title: string;
+    description: string;
+}
+
+const Process: React.FC = () => {
+    const whatsappNumber = '6281234567890';
+
+    const steps: ProcessStep[] = [
+        {
+            number: 1,
+            icon: 'calendar_month',
+            title: 'Booking',
+            description: 'Hubungi kami dan tentukan jadwal shooting yang nyaman untuk Anda.',
+        },
+        {
+            number: 2,
+            icon: 'camera',
+            title: 'Shooting & Editing',
+            description: 'Tim profesional kami akan datang ke lokasi dan mengambil foto 360°.',
+        },
+        {
+            number: 3,
+            icon: 'link',
+            title: 'Link Siap Pakai',
+            description: 'Dalam 3-5 hari, virtual tour Anda siap dibagikan ke calon pembeli.',
+        },
+    ];
+
+    return (
+        <section id="process" className="process" aria-labelledby="process-title">
+            <div className="process__container">
+                {/* Header */}
+                <header className="process__header">
+                    <span className="process__label">Cara Kerja</span>
+                    <h2 id="process-title" className="process__title">
+                        Proses Mudah & Cepat
+                    </h2>
+                </header>
+
+                {/* Steps */}
+                <div className="process__steps">
+                    {steps.map((step) => (
+                        <article key={step.number} className="process__step">
+                            <div className="process__step-number" aria-hidden="true">
+                                {step.number}
+                            </div>
+                            <div className="process__step-icon-wrapper">
+                                <span
+                                    className="material-icons process__step-icon"
+                                    aria-hidden="true"
+                                >
+                                    {step.icon}
+                                </span>
+                            </div>
+                            <h3 className="process__step-title">{step.title}</h3>
+                            <p className="process__step-description">{step.description}</p>
+                        </article>
+                    ))}
+                </div>
+
+                {/* CTA */}
+                <div id="pricing" className="process__cta">
+                    <div className="process__cta-content">
+                        <h3 className="process__cta-title">Mulai dari Rp 750.000</h3>
+                        <p className="process__cta-text">
+                            Investasi kecil untuk hasil maksimal
+                        </p>
+                    </div>
+                    <a
+                        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan layanan virtual tour.')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="process__cta-button"
+                    >
+                        <span className="material-icons process__cta-icon" aria-hidden="true">
+                            chat
+                        </span>
+                        Konsultasi Gratis
+                    </a>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+export default Process;

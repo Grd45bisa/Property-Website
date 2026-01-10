@@ -1,0 +1,14 @@
+# Robots.txt for VirtuTour
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://virtutour.id/sitemap.xml
+
+# Disallow admin paths (if any)
+Disallow: /admin/
+Disallow: /api/
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

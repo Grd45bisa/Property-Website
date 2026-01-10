@@ -1,0 +1,99 @@
+/* ========================================
+   TrustLogos Component - BEM CSS
+   ======================================== */
+
+.trust-logos {
+    padding: var(--spacing-8) var(--spacing-4);
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+@media (min-width: 640px) {
+    .trust-logos {
+        padding: var(--spacing-10) var(--spacing-6);
+    }
+}
+
+.trust-logos__container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+}
+
+.trust-logos__title {
+    text-align: center;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--spacing-6);
+}
+
+@media (min-width: 640px) {
+    .trust-logos__title {
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--spacing-8);
+    }
+}
+
+.trust-logos__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-6);
+}
+
+@media (min-width: 640px) {
+    .trust-logos__list {
+        gap: var(--spacing-10);
+    }
+}
+
+@media (min-width: 1024px) {
+    .trust-logos__list {
+        gap: var(--spacing-16);
+    }
+}
+
+.trust-logos__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trust-logos__image {
+    height: 24px;
+    width: auto;
+    opacity: 0.6;
+    filter: grayscale(100%);
+    transition: all var(--transition-normal);
+}
+
+@media (min-width: 640px) {
+    .trust-logos__image {
+        height: 32px;
+    }
+}
+
+.trust-logos__item:hover .trust-logos__image {
+    opacity: 1;
+    filter: grayscale(0%);
+}
+
+.trust-logos__text {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-400);
+    transition: color var(--transition-normal);
+}
+
+@media (min-width: 640px) {
+    .trust-logos__text {
+        font-size: var(--font-size-base);
+    }
+}
+
+.trust-logos__item:hover .trust-logos__text {
+    color: var(--color-gray-700);
+}

@@ -1,0 +1,395 @@
+/* ========================================
+   Portfolio Component - BEM CSS
+   ======================================== */
+
+.portfolio {
+    padding: var(--spacing-12) var(--spacing-4);
+    background-color: var(--color-white);
+}
+
+@media (min-width: 640px) {
+    .portfolio {
+        padding: var(--spacing-16) var(--spacing-6);
+    }
+}
+
+@media (min-width: 1024px) {
+    .portfolio {
+        padding: var(--spacing-20) var(--spacing-8);
+    }
+}
+
+.portfolio__container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+}
+
+/* Header */
+.portfolio__header {
+    text-align: center;
+    margin-bottom: var(--spacing-8);
+}
+
+@media (min-width: 640px) {
+    .portfolio__header {
+        margin-bottom: var(--spacing-10);
+    }
+}
+
+.portfolio__label {
+    display: inline-block;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--spacing-2);
+}
+
+.portfolio__title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-gray-900);
+    margin-bottom: var(--spacing-3);
+}
+
+@media (min-width: 640px) {
+    .portfolio__title {
+        font-size: var(--font-size-3xl);
+    }
+}
+
+@media (min-width: 1024px) {
+    .portfolio__title {
+        font-size: var(--font-size-4xl);
+    }
+}
+
+.portfolio__description {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+    .portfolio__description {
+        font-size: var(--font-size-base);
+    }
+}
+
+/* Filters */
+.portfolio__filters {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-6);
+    overflow-x: auto;
+    padding-bottom: var(--spacing-2);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.portfolio__filters::-webkit-scrollbar {
+    display: none;
+}
+
+@media (min-width: 640px) {
+    .portfolio__filters {
+        margin-bottom: var(--spacing-8);
+        overflow-x: visible;
+        padding-bottom: 0;
+    }
+}
+
+.portfolio__filter {
+    flex-shrink: 0;
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-600);
+    background-color: var(--color-gray-100);
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    min-height: 44px;
+}
+
+.portfolio__filter:hover {
+    background-color: var(--color-gray-200);
+}
+
+.portfolio__filter--active {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    box-shadow: var(--shadow-primary);
+}
+
+/* Grid */
+.portfolio__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+    .portfolio__grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-5);
+    }
+}
+
+@media (min-width: 1024px) {
+    .portfolio__grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-6);
+    }
+}
+
+/* Card */
+.portfolio__card {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: box-shadow var(--transition-normal);
+    height: 100%;
+}
+
+@media (min-width: 640px) {
+    .portfolio__card {
+        border-radius: var(--radius-2xl);
+    }
+}
+
+.portfolio__card:hover {
+    box-shadow: var(--shadow-xl);
+}
+
+.portfolio__card--featured {
+    grid-column: span 1;
+}
+
+@media (min-width: 1024px) {
+    .portfolio__card--featured {
+        grid-column: span 2;
+    }
+}
+
+/* Image */
+.portfolio__image-wrapper {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 240px;
+    /* Default height mobile */
+}
+
+@media (min-width: 1024px) {
+
+    /* Row 1 Height (Item 1 & 2) */
+    .portfolio__image-wrapper {
+        height: 320px;
+        /* Matches h-80 */
+    }
+
+    /* Row 2 Height (Items 3,4,5) - Override for non-featured items that are not item 2? 
+       Actually user wants item 2 to be tall like item 1.
+       And items 3,4,5 to be shorter (h-48 ~ 192px).
+    */
+    .portfolio__card:nth-child(n+3) .portfolio__image-wrapper {
+        height: 192px;
+        /* Matches h-48 */
+    }
+}
+
+.portfolio__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.7s ease;
+}
+
+.portfolio__card:hover .portfolio__image {
+    transform: scale(1.1);
+}
+
+/* Overlay */
+.portfolio__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.1), transparent);
+    pointer-events: none;
+}
+
+/* Content */
+.portfolio__content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+    .portfolio__content {
+        padding: var(--spacing-5);
+    }
+}
+
+.portfolio__card-title {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-white);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 640px) {
+    .portfolio__card-title {
+        font-size: var(--font-size-lg);
+    }
+}
+
+.portfolio__card-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-1) var(--spacing-2);
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: capitalize;
+    margin-top: var(--spacing-2);
+}
+
+@media (min-width: 640px) {
+    .portfolio__card-badge {
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* View All Button */
+.portfolio__view-all {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-8);
+}
+
+@media (min-width: 640px) {
+    .portfolio__view-all {
+        margin-top: var(--spacing-10);
+    }
+}
+
+.portfolio__button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-6);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-600);
+    background: transparent;
+    border: 2px solid var(--color-gray-200);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    min-height: 44px;
+}
+
+.portfolio__button:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.portfolio__button-icon {
+    font-size: 18px;
+}
+
+/* ===== LOCATION BADGE - Top Left ===== */
+.portfolio__location-badge {
+    position: absolute;
+    top: var(--spacing-3);
+    left: var(--spacing-3);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    padding: var(--spacing-1) var(--spacing-2);
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-full);
+    z-index: 10;
+    transition: transform var(--transition-fast);
+}
+
+@media (min-width: 640px) {
+    .portfolio__location-badge {
+        top: var(--spacing-4);
+        left: var(--spacing-4);
+        padding: var(--spacing-1) var(--spacing-3);
+    }
+}
+
+.portfolio__card:hover .portfolio__location-badge {
+    transform: scale(1.05);
+}
+
+.portfolio__location-icon {
+    font-size: 14px;
+    color: var(--color-white);
+}
+
+@media (min-width: 640px) {
+    .portfolio__location-icon {
+        font-size: 16px;
+    }
+}
+
+.portfolio__location-text {
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-white);
+    white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+    .portfolio__location-text {
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* ===== TYPE BADGE - Top Right ===== */
+.portfolio__type-badge {
+    position: absolute;
+    top: var(--spacing-3);
+    right: var(--spacing-3);
+    padding: var(--spacing-1) var(--spacing-2);
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-white);
+    z-index: 10;
+    transition: transform var(--transition-fast);
+}
+
+@media (min-width: 640px) {
+    .portfolio__type-badge {
+        top: var(--spacing-4);
+        right: var(--spacing-4);
+        padding: var(--spacing-1) var(--spacing-3);
+        font-size: var(--font-size-xs);
+    }
+}
+
+.portfolio__card:hover .portfolio__type-badge {
+    transform: scale(1.05);
+}
