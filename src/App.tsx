@@ -13,11 +13,13 @@ import Footer from './components/Footer/Footer';
 import PortfolioPage from './pages/PortfolioPage';
 import DashboardPage from './pages/DashboardPage';
 import EditTourPage from './pages/EditTourPage';
+import LoginPage from './pages/LoginPage';
 
 // Lazy loaded pages for code splitting
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 const DemoTourPage = lazy(() => import('./pages/DemoTourPage'));
+const TourPage = lazy(() => import('./pages/TourPage'));
 
 // Loading component
 const PageLoader: React.FC = () => (
@@ -64,7 +66,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/demo" element={<DemoTourPage />} />
-          <Route path="/tour/:id" element={<DemoTourPage />} />
+          <Route path="/tour/:id" element={<TourPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/editor/:id" element={<EditTourPage />} />
@@ -74,6 +76,7 @@ const App: React.FC = () => {
           <Route path="/editor/:id/settings" element={<EditTourPage />} />
           <Route path="/blog" element={<BlogListPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
+          <Route path="/login" element={<LoginPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

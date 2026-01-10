@@ -620,3 +620,16 @@
     margin: 0 auto var(--spacing-6);
     line-height: 1.6;
 }
+
+.dashboard__card-btn--duplicate {
+    background: var(--color-white);
+    border-color: var(--color-gray-200);
+    color: var(--color-gray-400);
+    padding: var(--spacing-2);
+}
+
+.dashboard__card-btn--duplicate:hover {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.05);
+}

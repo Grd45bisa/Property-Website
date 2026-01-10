@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import VirtualTourEditor from '../components/Editor/VirtualTourEditor';
+import { supabase } from '../lib/supabaseClient';
 import './EditTourPage.css';
 
 const EditTourPage: React.FC = () => {
@@ -21,15 +22,16 @@ const EditTourPage: React.FC = () => {
     };
     const activeTab = getActiveTab();
 
-    // Mock Data (Simulasi data yang ditarik dari DB)
+    // State
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        title: 'Luxury Villa Canggu',
-        description: 'Villa mewah 4 kamar tidur dengan kolam renang pribadi dan pemandangan sawah.',
-        location: 'Canggu, Bali',
-        price: 'IDR 8.5 M',
-        agentName: 'Budi Santoso',
-        agentWhatsapp: '6281234567890',
-        coverImage: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+        title: '',
+        description: '',
+        location: '',
+        price: '',
+        agentName: '',
+        agentWhatsapp: '',
+        coverImage: ''
     });
 
     // Share/Embed state
@@ -45,14 +47,83 @@ const EditTourPage: React.FC = () => {
         ? `<iframe src="${tourUrl}?embed=true" style="width: 100%; height: ${embedHeight}px; border: none;" allowfullscreen></iframe>`
         : `<iframe src="${tourUrl}?embed=true" width="${embedWidth}" height="${embedHeight}" style="border: none;" allowfullscreen></iframe>`;
 
+    // Mock/Real Data Fetch
+    useEffect(() => {
+        if (id) {
+            if (id === 'demo') {
+                // Load Mock Data for Demo
+                setFormData({
+                    title: 'Demo Project: Luxury Villa',
+                    description: 'This is a demo project to showcase the virtual tour capabilities.',
+                    location: 'Bali, Indonesia',
+                    price: 'IDR 5.5 M',
+                    agentName: 'Demo Agent',
+                    agentWhatsapp: '628123456789',
+                    coverImage: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80'
+                });
+            } else if (id !== 'new') {
+                fetchTourInfo();
+            }
+        }
+    }, [id]);
+
+    const fetchTourInfo = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tours')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                setFormData({
+                    title: data.title,
+                    description: data.description || '',
+                    location: data.location || '',
+                    price: data.price || '',
+                    agentName: data.agent_name || '',
+                    agentWhatsapp: data.agent_whatsapp || '',
+                    coverImage: data.thumbnail_url || 'https://via.placeholder.com/800x600?text=No+Cover+Image'
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching tour info:', error);
+        }
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        alert('Data berhasil disimpan! (Simulasi)');
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('tours')
+                .update({
+                    title: formData.title,
+                    description: formData.description,
+                    thumbnail_url: formData.coverImage,
+                    location: formData.location,
+                    price: formData.price,
+                    agent_name: formData.agentName,
+                    agent_whatsapp: formData.agentWhatsapp,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+            alert('Data Project berhasil disimpan!');
+        } catch (error) {
+            console.error('Error saving project:', error);
+            alert('Gagal menyimpan project');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyToClipboard = (text: string, type: 'link' | 'embed') => {
@@ -86,7 +157,7 @@ const EditTourPage: React.FC = () => {
 
                     {/* Project Info */}
                     <div className="editor-sidebar__project">
-                        <img src={formData.coverImage} alt={formData.title} className="editor-sidebar__thumb" />
+                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Image'} alt={formData.title} className="editor-sidebar__thumb" />
                         <div className="editor-sidebar__project-info">
                             <h3 className="editor-sidebar__project-title">{formData.title}</h3>
                             <span className="editor-sidebar__project-status">Published</span>
@@ -127,9 +198,9 @@ const EditTourPage: React.FC = () => {
                                     Preview
                                 </Link>
                                 {activeTab !== 'share' && (
-                                    <button onClick={handleSave} className="editor-btn-primary">
+                                    <button onClick={handleSave} className="editor-btn-primary" disabled={loading}>
                                         <span className="material-icons">save</span>
-                                        Simpan
+                                        {loading ? 'Menyimpan...' : 'Simpan'}
                                     </button>
                                 )}
                             </div>
@@ -139,7 +210,7 @@ const EditTourPage: React.FC = () => {
                     {/* 360 Editor Tab */}
                     {activeTab === '360' && (
                         <div className="editor-form editor-form--360">
-                            <VirtualTourEditor />
+                            <VirtualTourEditor tourId={id} />
                         </div>
                     )}
 
@@ -205,7 +276,7 @@ const EditTourPage: React.FC = () => {
                                 <div className="form-group">
                                     <label className="form-label">Cover Image (Thumbnail)</label>
                                     <div className="image-upload-preview">
-                                        <img src={formData.coverImage} alt="Cover Preview" className="image-preview" />
+                                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
                                         <button type="button" className="btn-upload">
                                             <span className="material-icons">cloud_upload</span>
                                             Ganti Gambar
@@ -370,10 +441,23 @@ const EditTourPage: React.FC = () => {
                                     {/* Preview */}
                                     <div className="embed-preview">
                                         <h4 className="embed-preview__title">Preview</h4>
-                                        <div className="embed-preview__frame" style={{ height: `${Math.min(parseInt(embedHeight) || 300, 400)}px` }}>
+                                        <div className="embed-preview__frame" style={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            background: '#f3f4f6',
+                                            padding: '1rem',
+                                            borderRadius: '8px',
+                                            overflow: 'auto'
+                                        }}>
                                             <iframe
-                                                src={id === 'demo' ? '/demo' : `/tour/${id}`}
-                                                style={{ width: '100%', height: '100%', border: 'none' }}
+                                                src={id && id !== 'new' ? (id === 'demo' ? '/demo' : `/tour/${id}?embed=true`) : 'about:blank'}
+                                                style={{
+                                                    width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
+                                                    height: `${embedHeight}px`,
+                                                    border: '1px solid #e5e7eb',
+                                                    backgroundColor: 'white',
+                                                    maxWidth: '100%'
+                                                }}
                                                 title="Tour Preview"
                                             />
                                         </div>

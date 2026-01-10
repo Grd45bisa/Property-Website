@@ -537,3 +537,14 @@
     line-height: var(--line-height-relaxed);
     margin: 0;
 }
+
+/* Utility classes */
+.hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.demo-page__control-btn.active {
+    background-color: var(--color-primary) !important;
+    color: white !important;
+}
