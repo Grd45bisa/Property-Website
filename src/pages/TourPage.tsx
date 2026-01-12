@@ -46,6 +46,9 @@ const TourPage: React.FC = () => {
     const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null);
     const [isRoomSelectorOpen, setIsRoomSelectorOpen] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [isGyroEnabled, setIsGyroEnabled] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const isGyroEnabledRef = useRef(false); // To track state in event listeners
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const hasPlayedIntro = useRef(false);
     const lastObjectUrl = useRef<string | null>(null);
@@ -194,8 +197,9 @@ const TourPage: React.FC = () => {
                         case 'info': default: icon.textContent = 'info'; break;
                     }
 
+
+                    // All icons white for clean look - handled by CSS class .hotspot-icon
                     icon.style.fontSize = hs.type === 'scene' ? '24px' : '22px';
-                    icon.style.color = '#ffffff';
                     hotSpotDiv.appendChild(icon);
 
                     const tooltip = document.createElement('div');
@@ -380,6 +384,11 @@ const TourPage: React.FC = () => {
                     if (viewerRef.current) {
                         viewerRef.current.addEventListener('contextmenu', (e) => e.preventDefault());
                     }
+
+                    // Persist Gyro state if enabled (scene change stops it by default)
+                    if (isGyroEnabledRef.current && pannellumInstance.current) {
+                        pannellumInstance.current.startOrientation();
+                    }
                 });
 
                 pannellumInstance.current.on('error', (err: any) => {
@@ -431,6 +440,23 @@ const TourPage: React.FC = () => {
         };
     }, [currentRoomId, currentRoom, nadirEnabled, nadirUrl]);
 
+    // Detect Mobile Device
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+            if (/android/i.test(userAgent)) {
+                setIsMobile(true);
+                return;
+            }
+            if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+                setIsMobile(true);
+                return;
+            }
+            setIsMobile(false);
+        };
+        checkMobile();
+    }, []);
+
 
 
     // Controls
@@ -474,6 +500,36 @@ const TourPage: React.FC = () => {
         setTimeout(() => {
             if (pannellumInstance.current) pannellumInstance.current.resize();
         }, 300);
+    };
+
+    const handleGyroToggle = () => {
+        if (!pannellumInstance.current) return;
+
+        if (!isGyroEnabled) {
+            // Enabling Gyro
+            if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+                // iOS 13+ requires permission
+                (DeviceOrientationEvent as any).requestPermission()
+                    .then((permissionState: string) => {
+                        if (permissionState === 'granted') {
+                            pannellumInstance.current.startOrientation();
+                            setIsGyroEnabled(true);
+                            isGyroEnabledRef.current = true;
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS or older devices
+                pannellumInstance.current.startOrientation();
+                setIsGyroEnabled(true);
+                isGyroEnabledRef.current = true;
+            }
+        } else {
+            // Disabling Gyro
+            pannellumInstance.current.stopOrientation();
+            setIsGyroEnabled(false);
+            isGyroEnabledRef.current = false;
+        }
     };
 
     // Sync state with browser fullscreen changes (e.g. Esc key)
@@ -527,6 +583,12 @@ const TourPage: React.FC = () => {
                     transition: 'transform 0.6s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.4s ease',
                     transform: isTransitioning ? 'scale(1.4)' : 'scale(1)',
                     opacity: isTransitioning ? 0 : 1
+                }}
+                onTouchEnd={() => {
+                    if (isGyroEnabledRef.current && pannellumInstance.current) {
+                        // Resume gyro if it was enabled
+                        pannellumInstance.current.startOrientation();
+                    }
                 }}
             />
 
@@ -608,18 +670,6 @@ const TourPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Navigation Arrows - Hide if single room? Or keep for ease */}
-            {rooms.length > 1 && (
-                <>
-                    <button onClick={handlePrevRoom} className="demo-page__nav-arrow demo-page__nav-arrow--left">
-                        <span className="material-icons demo-page__nav-arrow-icon">chevron_left</span>
-                    </button>
-                    <button onClick={handleNextRoom} className="demo-page__nav-arrow demo-page__nav-arrow--right">
-                        <span className="material-icons demo-page__nav-arrow-icon">chevron_right</span>
-                    </button>
-                </>
-            )}
-
             {/* Controls */}
             <div className="demo-page__controls">
                 <button onClick={handleZoomIn} className="demo-page__control-btn"><span className="material-icons demo-page__control-icon">add</span></button>
@@ -633,35 +683,48 @@ const TourPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* Gyro Button - Bottom Right - Mobile Only */}
+            {isMobile && (
+                <button
+                    onClick={handleGyroToggle}
+                    className={`demo-page__gyro-btn ${isGyroEnabled ? 'active' : ''}`}
+                    title={isGyroEnabled ? "Matikan Gyroscope" : "Hidupkan Gyroscope"}
+                >
+                    <span className="material-icons demo-page__control-icon">screen_rotation</span>
+                </button>
+            )}
+
             {/* Back Button - Hide if Embed */}
 
 
             {/* Room Selector */}
-            {rooms.length > 1 && (
-                <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>
-                    <button className="demo-page__room-toggle" onClick={() => setIsRoomSelectorOpen(!isRoomSelectorOpen)}>
-                        <span className="demo-page__room-toggle-label">
-                            <span className="material-icons">meeting_room</span>
-                            {currentRoom.name}
-                        </span>
-                        <span className={`material-icons demo-page__room-toggle-arrow ${isRoomSelectorOpen ? 'rotated' : ''}`}>expand_less</span>
-                    </button>
-                    <div className={`demo-page__room-list ${isRoomSelectorOpen ? 'demo-page__room-list--open' : ''}`}>
-                        {rooms.map((room) => (
-                            <button
-                                key={room.id}
-                                onClick={() => { setCurrentRoomId(room.id); setIsRoomSelectorOpen(false); }}
-                                className={`demo-page__room-btn ${currentRoomId === room.id ? 'demo-page__room-btn--active' : ''}`}
-                            >
-                                <span className="material-icons demo-page__room-btn-icon">
-                                    {room.id === currentRoomId ? 'radio_button_checked' : 'radio_button_unchecked'}
-                                </span>
-                                {room.name}
-                            </button>
-                        ))}
+            {
+                rooms.length > 1 && (
+                    <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>
+                        <button className="demo-page__room-toggle" onClick={() => setIsRoomSelectorOpen(!isRoomSelectorOpen)}>
+                            <span className="demo-page__room-toggle-label">
+                                <span className="material-icons">meeting_room</span>
+                                {currentRoom.name}
+                            </span>
+                            <span className={`material-icons demo-page__room-toggle-arrow ${isRoomSelectorOpen ? 'rotated' : ''}`}>expand_less</span>
+                        </button>
+                        <div className={`demo-page__room-list ${isRoomSelectorOpen ? 'demo-page__room-list--open' : ''}`}>
+                            {rooms.map((room) => (
+                                <button
+                                    key={room.id}
+                                    onClick={() => { setCurrentRoomId(room.id); setIsRoomSelectorOpen(false); }}
+                                    className={`demo-page__room-btn ${currentRoomId === room.id ? 'demo-page__room-btn--active' : ''}`}
+                                >
+                                    <span className="material-icons demo-page__room-btn-icon">
+                                        {room.id === currentRoomId ? 'radio_button_checked' : 'radio_button_unchecked'}
+                                    </span>
+                                    {room.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Hotspot Styles - Reusing same styles as Demo */}
             <style>{`
@@ -671,32 +734,51 @@ const TourPage: React.FC = () => {
                 
                 .custom-hotspot {
                     width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; transition: transform 0.15s ease;
+                    cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 }
-                .custom-hotspot:hover { transform: scale(1.15); }
+                .custom-hotspot:hover { 
+                    transform: scale(1.25); 
+                    box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+                    z-index: 100 !important;
+                }
                 .custom-hotspot--info {
-                    background: rgba(0, 0, 0, 0.6); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6);
+                    background: rgba(0, 0, 0, 0.7); 
+                    border-radius: 50%; 
+                    border: 1px solid rgba(255, 255, 255, 0.9);
+                    backdrop-filter: blur(4px);
+                }
+                .custom-hotspot--info:hover {
+                    background: rgba(0, 0, 0, 0.9);
+                    border-color: #ffffff;
                 }
                 .custom-hotspot--scene {
-                    background: rgba(34, 197, 94, 0.4); border-radius: 50%; border: 2px solid #22c55e;
+                    background: rgba(34, 197, 94, 0.7); 
+                    border-radius: 50%; 
+                    border: 2px solid #ffffff;
                     animation: pulse-scene 2s infinite;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                }
+                .custom-hotspot--scene:hover {
+                    background: rgba(34, 197, 94, 0.9);
+                    animation: none; /* Stop pulse on hover for stability */
                 }
                 @keyframes pulse-scene {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-                    50% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+                    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
                 }
                 .hotspot-tooltip {
                     position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(5px);
                     background: rgba(0, 0, 0, 0.9); color: white; padding: 8px 14px; border-radius: 8px;
                     font-size: 13px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden;
                     pointer-events: none; transition: opacity 0.1s ease, transform 0.1s ease, visibility 0.1s;
-                    margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 }
                 .custom-hotspot:hover .hotspot-tooltip { 
                     opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 

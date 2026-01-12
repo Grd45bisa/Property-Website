@@ -34,6 +34,9 @@ const DemoTourPage: React.FC = () => {
     const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null);
     const [isRoomSelectorOpen, setIsRoomSelectorOpen] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [isGyroEnabled, setIsGyroEnabled] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const isGyroEnabledRef = useRef(false);
 
     const whatsappNumber = '6281234567890';
     const propertyTitle = 'Luxury Villa Canggu - 4BR';
@@ -86,6 +89,25 @@ const DemoTourPage: React.FC = () => {
 
     const currentRoom = rooms.find(r => r.id === currentRoomId) || rooms[0];
 
+
+
+    // Detect Mobile
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+            if (/android/i.test(userAgent)) {
+                setIsMobile(true);
+                return;
+            }
+            if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+                setIsMobile(true);
+                return;
+            }
+            setIsMobile(false);
+        };
+        checkMobile();
+    }, []);
+
     useEffect(() => {
         const initViewer = () => {
             if (!viewerRef.current || !window.pannellum) return;
@@ -121,9 +143,8 @@ const DemoTourPage: React.FC = () => {
                             break;
                     }
 
-                    // All icons white for clean look
+                    // All icons white for clean look - handled by CSS class .hotspot-icon
                     icon.style.fontSize = hs.type === 'scene' ? '24px' : '22px';
-                    icon.style.color = '#ffffff';
                     hotSpotDiv.appendChild(icon);
 
                     const tooltip = document.createElement('div');
@@ -176,6 +197,11 @@ const DemoTourPage: React.FC = () => {
                     viewerRef.current.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
                     });
+                }
+
+                // Persist Gyro state if enabled
+                if (isGyroEnabledRef.current && pannellumInstance.current) {
+                    pannellumInstance.current.startOrientation();
                 }
             });
 
@@ -233,6 +259,36 @@ const DemoTourPage: React.FC = () => {
         }, 300);
     };
 
+    const handleGyroToggle = () => {
+        if (!pannellumInstance.current) return;
+
+        if (!isGyroEnabled) {
+            // Enabling Gyro
+            if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+                // iOS 13+ requires permission
+                (DeviceOrientationEvent as any).requestPermission()
+                    .then((permissionState: string) => {
+                        if (permissionState === 'granted') {
+                            pannellumInstance.current.startOrientation();
+                            setIsGyroEnabled(true);
+                            isGyroEnabledRef.current = true;
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS or older devices
+                pannellumInstance.current.startOrientation();
+                setIsGyroEnabled(true);
+                isGyroEnabledRef.current = true;
+            }
+        } else {
+            // Disabling Gyro
+            pannellumInstance.current.stopOrientation();
+            setIsGyroEnabled(false);
+            isGyroEnabledRef.current = false;
+        }
+    };
+
     const handlePrevRoom = () => {
         const currentIndex = rooms.findIndex(r => r.id === currentRoomId);
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : rooms.length - 1;
@@ -257,6 +313,11 @@ const DemoTourPage: React.FC = () => {
                     transition: 'transform 0.6s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.4s ease',
                     transform: isTransitioning ? 'scale(1.4)' : 'scale(1)',
                     opacity: isTransitioning ? 0 : 1
+                }}
+                onTouchEnd={() => {
+                    if (isGyroEnabledRef.current && pannellumInstance.current) {
+                        pannellumInstance.current.startOrientation();
+                    }
                 }}
             />
 
@@ -316,6 +377,17 @@ const DemoTourPage: React.FC = () => {
                     <span className="material-icons demo-page__control-icon">remove</span>
                 </button>
             </div>
+
+            {/* Gyro Button - Stacked above Fullscreen - Mobile Only */}
+            {isMobile && (
+                <button
+                    onClick={handleGyroToggle}
+                    className={`demo-page__gyro-btn demo-page__gyro-btn--stacked ${isGyroEnabled ? 'active' : ''}`}
+                    aria-label={isGyroEnabled ? "Turn off Gyroscope" : "Turn on Gyroscope"}
+                >
+                    <span className="material-icons demo-page__control-icon">screen_rotation</span>
+                </button>
+            )}
 
             {/* Fullscreen Button - Separate */}
             <button

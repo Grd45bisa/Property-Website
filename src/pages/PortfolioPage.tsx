@@ -178,7 +178,7 @@ const PortfolioPage: React.FC = () => {
 
                     <div className="portfolio-hero__preview">
                         <iframe
-                            src="https://d1rzpg1r7cxehl.cloudfront.net/tour/40469154-0b3c-4c82-b246-2283b80f74a3"
+                            src="/tour/40469154-0b3c-4c82-b246-2283b80f74a3"
                             width="100%"
                             height="100%"
                             frameBorder="0"
