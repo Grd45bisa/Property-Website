@@ -670,6 +670,18 @@ const TourPage: React.FC = () => {
                 </div>
             </div>
 
+            {/* Navigation Arrows */}
+            {rooms.length > 1 && (
+                <>
+                    <button onClick={handlePrevRoom} className="demo-page__nav-arrow demo-page__nav-arrow--left">
+                        <span className="material-icons demo-page__nav-arrow-icon">chevron_left</span>
+                    </button>
+                    <button onClick={handleNextRoom} className="demo-page__nav-arrow demo-page__nav-arrow--right">
+                        <span className="material-icons demo-page__nav-arrow-icon">chevron_right</span>
+                    </button>
+                </>
+            )}
+
             {/* Controls */}
             <div className="demo-page__controls">
                 <button onClick={handleZoomIn} className="demo-page__control-btn"><span className="material-icons demo-page__control-icon">add</span></button>
