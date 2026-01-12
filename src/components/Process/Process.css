@@ -177,7 +177,8 @@
 .process__cta {
     margin-top: var(--spacing-10);
     padding: var(--spacing-6);
-    background-color: var(--color-gray-900);
+    background-color: var(--color-primary);
+    /* Updated from gray-900 to primary */
     border-radius: var(--radius-2xl);
     text-align: center;
 }
@@ -237,8 +238,10 @@
     align-items: center;
     justify-content: center;
     gap: var(--spacing-2);
-    background-color: var(--color-primary);
-    color: var(--color-white);
+    background-color: var(--color-white);
+    /* White button on Primary bg */
+    color: var(--color-primary);
+    /* Primary text */
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-bold);
     padding: var(--spacing-3) var(--spacing-6);
@@ -257,8 +260,8 @@
 }
 
 .process__cta-button:hover {
-    background-color: var(--color-primary-dark);
-    color: var(--color-white);
+    background-color: var(--color-gray-100);
+    color: var(--color-primary-dark);
 }
 
 .process__cta-icon {

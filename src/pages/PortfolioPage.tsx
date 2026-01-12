@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar/Navbar';
-import Footer from '../components/Footer';
+import Navbar from './../components/Navbar/Navbar';
+import Footer from './../components/Footer/Footer';
 import './PortfolioPage.css';
 
 interface PortfolioItem {
@@ -157,19 +157,7 @@ const PortfolioPage: React.FC = () => {
             return item.type === activeFilter.toLowerCase();
         });
 
-    // State for interactive hero
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - left) / width - 0.5; // -0.5 to 0.5
-        const y = (e.clientY - top) / height - 0.5; // -0.5 to 0.5
-        setMousePos({ x, y });
-    };
-
-    const handleMouseLeave = () => {
-        setMousePos({ x: 0, y: 0 });
-    };
 
     return (
         <div className="page-wrapper">
@@ -188,48 +176,17 @@ const PortfolioPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <div
-                        className="portfolio-hero__preview"
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        {/* Wrapper for image and hotspots to move together */}
-                        <div
-                            className="portfolio-hero__scene"
-                            style={{
-                                transform: `translate(calc(-50% + ${mousePos.x * -30}px), calc(-50% + ${mousePos.y * -30}px))`
-                            }}
-                        >
-                            <img
-                                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-                                alt="Interactive Virtual Tour Preview"
-                                className="portfolio-hero__image"
-                            />
-
-                            {/* Simulated Hotspot 1 */}
-                            <div className="portfolio-hero__hotspot" style={{ top: '60%', left: '70%' }}>
-                                <span className="material-icons">info</span>
-                                <div className="portfolio-hero__hotspot-tooltip">Info Detail</div>
-                            </div>
-
-                            {/* Simulated Hotspot 2 */}
-                            <div className="portfolio-hero__hotspot" style={{ top: '40%', left: '30%' }}>
-                                <span className="material-icons">arrow_forward</span>
-                                <div className="portfolio-hero__hotspot-tooltip">Ke Ruang Makan</div>
-                            </div>
-                        </div>
-
-                        <div className="portfolio-hero__overlay"></div>
-
-                        {/* Controls - Functional Links to Demo */}
-                        <div className="portfolio-hero__controls">
-                            <Link to="/demo" className="portfolio-hero__icon" aria-label="360 View">
-                                <span className="material-icons">360</span>
-                            </Link>
-                            <Link to="/demo" className="portfolio-hero__icon" aria-label="Fullscreen">
-                                <span className="material-icons">fullscreen</span>
-                            </Link>
-                        </div>
+                    <div className="portfolio-hero__preview">
+                        <iframe
+                            src="https://d1rzpg1r7cxehl.cloudfront.net/tour/40469154-0b3c-4c82-b246-2283b80f74a3"
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            allowFullScreen
+                            allow="gyroscope; accelerometer; fullscreen"
+                            title="Virtual Tour Preview"
+                            style={{ border: 0, borderRadius: 'inherit' }}
+                        ></iframe>
                     </div>
                 </section>
 

@@ -67,9 +67,10 @@
 .problem-solution__table {
     width: 100%;
     background-color: var(--color-white);
-    border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-xl);
     overflow: hidden;
+    border: 1px solid var(--color-gray-200);
+    /* Flat Design: Border instead of shadow */
 }
 
 .problem-solution__row {
@@ -78,16 +79,19 @@
 }
 
 .problem-solution__row--header {
-    background-color: var(--color-gray-900);
+    background-color: var(--color-primary);
+    /* Use Primary Color */
 }
 
 .problem-solution__row:not(.problem-solution__row--header):hover {
-    background-color: var(--color-gray-50);
+    background-color: transparent;
+    /* No hover effect on rows for cleaner flat look, or very subtle */
 }
 
 .problem-solution__cell {
     padding: var(--spacing-4);
-    border-bottom: 1px solid var(--color-gray-100);
+    border-bottom: 1px solid var(--color-gray-200);
+    /* Light border */
 }
 
 @media (min-width: 640px) {
@@ -120,12 +124,14 @@
 }
 
 .problem-solution__cell--problem {
-    background-color: rgba(239, 68, 68, 0.05);
-    border-right: 1px solid var(--color-gray-100);
+    background-color: var(--color-gray-50);
+    /* Very light gray */
+    border-right: 1px solid var(--color-gray-200);
 }
 
 .problem-solution__cell--solution {
-    background-color: rgba(34, 197, 94, 0.05);
+    background-color: var(--color-white);
+    /* Pure White */
 }
 
 .problem-solution__content {
@@ -153,11 +159,14 @@
 }
 
 .problem-solution__icon--problem {
-    color: var(--color-error);
+    color: #ef4444;
+    /* Soft Red */
+    opacity: 0.8;
 }
 
 .problem-solution__icon--solution {
     color: var(--color-primary);
+    /* Ruang360 Primary */
 }
 
 .problem-solution__text {

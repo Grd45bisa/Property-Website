@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
                         CHAT KAMI SEKARANG
                     </a>
                     <p className="mt-8 text-sm text-gray-500">
-                        © {currentYear} VirtuTour. All rights reserved.
+                        © {currentYear} Ruang360. All rights reserved.
                     </p>
                 </div>
             </footer>

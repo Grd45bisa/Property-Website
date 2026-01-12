@@ -27,6 +27,10 @@ interface Hotspot {
     text: string;
     targetSceneId?: string;
     description?: string;
+    // Appearance & Rendering
+    scale?: number; // 0.5 to 2.0, default 1
+    opacity?: number; // 0 to 1, default 1
+    renderMode?: '2d' | 'floor' | 'wall';
 }
 
 // Icon config
@@ -61,6 +65,12 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     const [nadirUrl, setNadirUrl] = useState<string | null>(null);
     const [nadirEnabled, setNadirEnabled] = useState(false);
     const [isNadirModalOpen, setIsNadirModalOpen] = useState(false);
+
+
+
+    // Pitch Limit State (controls how far down user can look)
+    const [minPitch, setMinPitch] = useState<number>(-90); // -90 = full view, higher = more restricted
+    const [isPitchModalOpen, setIsPitchModalOpen] = useState(false);
 
     // Compression Tool State
     const [isCompressModalOpen, setIsCompressModalOpen] = useState(false);
@@ -255,10 +265,10 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         if (!tourId) return;
         setLoading(true);
         try {
-            // Fetch Tour Settings (Nadir)
+            // Fetch Tour Settings (Nadir, Pitch)
             const { data: tourData, error: tourError } = await supabase
                 .from('tours')
-                .select('nadir_image_url, nadir_enabled')
+                .select('nadir_image_url, nadir_enabled, min_pitch')
                 .eq('id', tourId)
                 .single();
 
@@ -266,6 +276,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             if (tourData) {
                 setNadirUrl(tourData.nadir_image_url || null);
                 setNadirEnabled(tourData.nadir_enabled || false);
+                setMinPitch(tourData.min_pitch ?? -90);
             }
 
             // Fetch Rooms
@@ -302,7 +313,10 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         yaw: h.yaw,
                         text: h.text || '',
                         targetSceneId: h.target_room_id,
-                        description: ''
+                        description: '',
+                        scale: h.scale,
+                        opacity: h.opacity,
+                        renderMode: h.render_mode as '2d' | 'floor' | 'wall'
                     }))
             }));
 
@@ -328,7 +342,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             pitch: hs.pitch,
             yaw: hs.yaw,
             type: 'custom',
-            cssClass: `editor-hotspot editor-hotspot--${hs.icon} ${!isPreviewMode && selectedHotspotId === hs.id ? 'editor-hotspot--selected' : ''}`,
+            cssClass: `editor-hotspot editor-hotspot--${hs.icon} ${!isPreviewMode && selectedHotspotId === hs.id ? 'editor-hotspot--selected' : ''} ${hs.renderMode === 'floor' ? 'editor-hotspot--floor' : hs.renderMode === 'wall' ? 'editor-hotspot--wall' : ''}`,
             clickHandlerFunc: () => {
                 if (isPreviewMode) {
                     if (isNavHotspot && hs.targetSceneId) {
@@ -340,6 +354,10 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 }
             },
             createTooltipFunc: (hotSpotDiv: HTMLElement) => {
+                // Apply visual settings via CSS variables
+                hotSpotDiv.style.setProperty('--hs-scale', String(hs.scale || 1));
+                hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity !== undefined ? hs.opacity : 1));
+
                 const icon = document.createElement('span');
                 icon.className = 'material-icons';
                 icon.textContent = iconConfig.materialIcon;
@@ -374,7 +392,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 hotSpots: [], // Start empty, let Sync Effect handle it to ensure consistency
                 pitch: 0,
                 yaw: 0,
-                hfov: 100
+                hfov: 100,
+                minPitch: minPitch, // Apply pitch limit
+                maxPitch: 90
             });
 
             // Event listener for adding hotspots
@@ -693,12 +713,13 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         showToast('Menyimpan perubahan...');
 
         try {
-            // 0. Save Tour Settings (Nadir)
+            // 0. Save Tour Settings (Nadir + Pitch Limit + Hotspot Size)
             const { error: tourError } = await supabase
                 .from('tours')
                 .update({
                     nadir_image_url: nadirUrl,
                     nadir_enabled: nadirEnabled,
+                    min_pitch: minPitch,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', tourId);
@@ -742,7 +763,10 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         yaw: h.yaw,
                         text: h.text,
                         icon: h.icon,
-                        target_room_id: h.targetSceneId || null
+                        target_room_id: h.targetSceneId || null,
+                        scale: h.scale || 1.0,
+                        opacity: h.opacity !== undefined ? h.opacity : 1.0,
+                        render_mode: h.renderMode || '2d'
                     });
                 });
             });
@@ -1231,6 +1255,13 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                     >
                         <span className="material-icons">branding_watermark</span>
                     </button>
+                    <button
+                        className={`vt-editor__tool-btn ${minPitch > -90 ? 'active' : ''}`}
+                        onClick={() => setIsPitchModalOpen(true)}
+                        data-tooltip="Batas Pandang Bawah"
+                    >
+                        <span className="material-icons">vertical_align_bottom</span>
+                    </button>
                 </div>
             )}
 
@@ -1284,6 +1315,131 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                     </div>
                 </div>
             )}
+
+            {/* Pitch Limit Settings Modal */}
+            {isPitchModalOpen && (
+                <div className="vt-editor__modal-overlay">
+                    <div className="vt-editor__modal">
+                        <h3>Batas Pandang Bawah</h3>
+                        <p className="vt-editor__modal-desc">
+                            Atur seberapa jauh pengunjung bisa melihat ke bawah. Berguna untuk menyembunyikan lantai/tripod.
+                        </p>
+
+                        {/* Visual Preview */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '20px',
+                            marginBottom: '20px',
+                            padding: '16px',
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: '12px'
+                        }}>
+                            <div style={{
+                                width: '100px',
+                                height: '100px',
+                                borderRadius: '50%',
+                                border: '3px solid rgba(255,255,255,0.3)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                {/* Visible area indicator */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    // Calculate bottom cutoff based on minPitch
+                                    // -90 = 0% hidden, -45 = 25% hidden, 0 = 50% hidden
+                                    bottom: `${((90 + minPitch) / 180) * 100}%`,
+                                    background: 'rgba(16, 185, 129, 0.5)',
+                                    transition: 'bottom 0.2s'
+                                }} />
+                                {/* Center line */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: 0,
+                                    right: 0,
+                                    height: '1px',
+                                    background: 'rgba(255,255,255,0.5)'
+                                }} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                                    {minPitch}°
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                                    {minPitch === -90 ? 'Penuh (sampai bawah)' :
+                                        minPitch >= -30 ? 'Sangat terbatas' :
+                                            minPitch >= -60 ? 'Sedang' : 'Sedikit terbatas'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Slider */}
+                        <div className="vt-editor__form-group">
+                            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span>Batas Minimum Pitch</span>
+                                <span style={{ color: '#9ca3af' }}>{minPitch}°</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="-90"
+                                max="-10"
+                                step="5"
+                                value={minPitch}
+                                onChange={(e) => setMinPitch(parseInt(e.target.value))}
+                                style={{
+                                    width: '100%',
+                                    height: '8px',
+                                    borderRadius: '4px',
+                                    background: `linear-gradient(to right, #10b981 ${((minPitch + 90) / 80) * 100}%, rgba(255,255,255,0.2) ${((minPitch + 90) / 80) * 100}%)`,
+                                    cursor: 'pointer',
+                                    WebkitAppearance: 'none',
+                                    appearance: 'none'
+                                }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                <span>-90° (Penuh)</span>
+                                <span>-10° (Terbatas)</span>
+                            </div>
+                        </div>
+
+                        {/* Preset Buttons */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                            {[
+                                { value: -90, label: 'Penuh' },
+                                { value: -70, label: 'Tripod Hidden' },
+                                { value: -50, label: 'Sedang' },
+                                { value: -30, label: 'Terbatas' }
+                            ].map(preset => (
+                                <button
+                                    key={preset.value}
+                                    className={`vt-editor__btn ${minPitch === preset.value ? 'vt-editor__btn--primary' : ''}`}
+                                    onClick={() => setMinPitch(preset.value)}
+                                    style={{ flex: 1, justifyContent: 'center', padding: '8px 12px' }}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="vt-editor__modal-actions">
+                            <button
+                                className="vt-editor__btn vt-editor__btn--primary"
+                                onClick={() => setIsPitchModalOpen(false)}
+                            >
+                                Selesai
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+
 
             {/* 4. Right Properties Panel (Not Visible in Preview) */}
             {!isPreviewMode && selectedHotspot && (
@@ -1417,33 +1573,74 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 .pnlm-hotspot-base { transition: none !important; }
                 
                 .editor-hotspot {
-                    width: 32px;
-                    height: 32px;
+                    width: 40px; /* Slightly larger base size */
+                    height: 40px;
                     background: rgba(255,255,255,0.9);
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                    transition: transform 0.2s;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                    transition: transform 0.1s; /* Faster update */
+                    
+                    /* CSS Variables for customization */
+                    --hs-scale: 1;
+                    --hs-opacity: 1;
+                    --hs-rotate-x: 0deg;
+                    
+                    transform-origin: center center;
+                    transform: scale(var(--hs-scale)) rotateX(var(--hs-rotate-x));
+                    opacity: var(--hs-opacity);
                 }
                 
-                .editor-hotspot:hover { transform: scale(1.1); z-index: 10; }
+                .editor-hotspot:hover { 
+                    z-index: 100;
+                    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5);
+                }
                 
                 .editor-hotspot--info { color: #3b82f6; }
                 .editor-hotspot--door { color: #10b981; }
                 .editor-hotspot--arrow { color: #10b981; }
+
+                /* Render Modes */
+                /* Floor: Flat on ground. Uses rotateX to simulate lying down. */
+                .editor-hotspot--floor {
+                    --hs-rotate-x: 75deg;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.3); /* Shadow underneath */
+                }
+                .editor-hotspot--floor .material-icons {
+                     /* Keep icon somewhat readable or let it flop? 
+                        Usually floor hotspots are rings or arrows. 
+                        Let's keep it simple: the whole div flops. */
+                }
+                
+                /* Wall: Facing somewhat upright. 
+                   Without true 3D, 'Wall' defaults to 2D but we can add style hints 
+                   or allow manual rotation in future. 
+                   For now, we make it 'flat' against a theoretical vertical plane 
+                   by removing standard shadow to look painted on? */
+                .editor-hotspot--wall {
+                     /* No rotation (faces camera), but maybe remove shadow 
+                        to look like a sticker? Or add specific border? */
+                     box-shadow: none;
+                     border: 2px solid white;
+                     background: rgba(255,255,255,0.5);
+                }
                 
                 .editor-hotspot--selected {
                     background: #10b981;
                     color: white;
-                    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3);
+                    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.5);
+                }
+                
+                .editor-hotspot--floor.editor-hotspot--selected {
+                     box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.5), 0 10px 20px rgba(0,0,0,0.3);
                 }
 
                 .editor-hotspot__tooltip {
                     position: absolute;
-                    bottom: 36px;
+                    bottom: 42px; /* Adjusted for larger base */
                     left: 50%;
                     transform: translateX(-50%);
                     background: rgba(0,0,0,0.8);
@@ -1455,6 +1652,14 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                     opacity: 0;
                     pointer-events: none;
                     transition: opacity 0.2s;
+                    /* Ensure tooltip doesn't rotate with the floor hotspot */
+                    transform-origin: bottom center;
+                }
+                
+                /* Counter-rotate tooltip for floor mode so it stands up */
+                .editor-hotspot--floor .editor-hotspot__tooltip {
+                    transform: translateX(-50%) rotateX(-75deg);
+                    bottom: 30px; 
                 }
                 
                 .editor-hotspot:hover .editor-hotspot__tooltip { opacity: 1; }

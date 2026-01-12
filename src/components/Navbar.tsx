@@ -10,7 +10,7 @@ const Navbar: React.FC = () => {
                     {/* Logo */}
                     <div className="flex-shrink-0 flex items-center gap-2">
                         <span className="material-icons text-primary text-3xl">view_in_ar</span>
-                        <span className="font-bold text-xl tracking-tight text-gray-900">VirtuTour</span>
+                        <span className="font-bold text-xl tracking-tight text-gray-900">Ruang360</span>
                     </div>
 
                     {/* Desktop Menu */}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+// Link removed as it is no longer used in standard view
+import OptimizedImage from '../OptimizedImage';
 import './Portfolio.css';
 
 interface PortfolioItem {
@@ -24,7 +25,7 @@ const Portfolio: React.FC = () => {
             type: 'villa',
             typeLabel: 'Villa',
             location: 'Canggu, Bali',
-            image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            image: 'portfolio-1',
             featured: true,
         },
         {
@@ -33,7 +34,7 @@ const Portfolio: React.FC = () => {
             type: 'apartemen',
             typeLabel: 'Apartment',
             location: 'Sudirman, Jakarta',
-            image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            image: 'portfolio-2',
         },
         {
             id: 3,
@@ -41,7 +42,7 @@ const Portfolio: React.FC = () => {
             type: 'rumah',
             typeLabel: 'House',
             location: 'BSD, Tangerang',
-            image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            image: 'portfolio-3',
         },
         {
             id: 4,
@@ -49,7 +50,7 @@ const Portfolio: React.FC = () => {
             type: 'villa',
             typeLabel: 'Villa',
             location: 'Ubud, Bali',
-            image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            image: 'portfolio-4',
         },
         {
             id: 5,
@@ -57,7 +58,7 @@ const Portfolio: React.FC = () => {
             type: 'komersial',
             typeLabel: 'Commercial',
             location: 'Kemang, Jakarta',
-            image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            image: 'portfolio-5',
         },
     ];
 
@@ -68,7 +69,8 @@ const Portfolio: React.FC = () => {
             return item.type === activeFilter;
         });
 
-    // Get type badge color class
+    // Get type badge color class (Unused in new layout but keeping if needed later, or commenting out)
+    /* 
     const getTypeBadgeClass = (type: string): string => {
         switch (type) {
             case 'villa': return 'portfolio__type-badge--villa';
@@ -78,23 +80,18 @@ const Portfolio: React.FC = () => {
             default: return '';
         }
     };
+    */
 
     return (
         <section id="portfolio" className="portfolio" aria-labelledby="portfolio-title">
             <div className="portfolio__container">
                 {/* Header */}
-                <header className="portfolio__header">
-                    <span className="portfolio__label">Portfolio</span>
-                    <h2 id="portfolio-title" className="portfolio__title">
-                        Contoh Hasil Karya Kami
-                    </h2>
-                    <p className="portfolio__description">
-                        Lihat bagaimana virtual tour kami membantu agen properti menjual lebih cepat
-                    </p>
-                </header>
+                <div className="portfolio__header-group">
+                    <h2 className="portfolio__title">Contoh Hasil Karya Kami</h2>
+                </div>
 
                 {/* Filters */}
-                <div className="portfolio__filters" role="tablist" aria-label="Filter kategori portfolio">
+                <div className="portfolio__filters">
                     {filters.map((filter) => {
                         const filterKey = filter.toLowerCase();
                         const isActive = activeFilter === filterKey;
@@ -103,9 +100,6 @@ const Portfolio: React.FC = () => {
                                 key={filter}
                                 onClick={() => setActiveFilter(filterKey)}
                                 className={`portfolio__filter ${isActive ? 'portfolio__filter--active' : ''}`}
-                                role="tab"
-                                aria-selected={isActive}
-                                aria-controls="portfolio-grid"
                             >
                                 {filter}
                             </button>
@@ -114,51 +108,64 @@ const Portfolio: React.FC = () => {
                 </div>
 
                 {/* Grid */}
-                <div id="portfolio-grid" className="portfolio__grid" role="tabpanel">
-                    {filteredItems.map((item) => (
-                        <article
-                            key={item.id}
-                            className={`portfolio__card ${item.featured ? 'portfolio__card--featured' : ''}`}
-                        >
-                            <div className="portfolio__image-wrapper">
-                                <img
-                                    src={item.image}
-                                    alt={`Virtual tour ${item.title}`}
-                                    className="portfolio__image"
-                                    loading="lazy"
-                                    decoding="async"
+                <div className="portfolio__grid">
+                    {filteredItems.map((item, index) => {
+                        // Logic to mimic the user's specific layout (First item span 2, Second item tall, others short)
+                        // ONLY applies when showing "Semua" (id 1,2,3,4,5).
+                        // For simplicity in filtered views, we might default to standard grid, but let's try to preserve the "First is big" rule if it's the featured one.
+
+                        // User snippet logic translation:
+                        // Item 1: md:col-span-2, h-64 md:h-80
+                        // Item 2: h-64 md:h-80
+                        // Item 3,4,5: h-48
+
+                        let cardClass = "portfolio__card group";
+                        // Using index to recreate the strict layout from snippet
+                        if (index === 0) {
+                            cardClass += " portfolio__card--large"; // Span 2, Tall
+                        } else if (index === 1) {
+                            cardClass += " portfolio__card--tall"; // Span 1, Tall
+                        } else {
+                            cardClass += " portfolio__card--short"; // Span 1, Short
+                        }
+
+                        return (
+                            <article key={item.id} className={cardClass}>
+                                <OptimizedImage
+                                    baseName={item.image}
+                                    alt={item.title}
+                                    className="portfolio__image transform group-hover:scale-105 transition duration-500"
+                                    width={index === 0 ? 800 : 400}
+                                    height={index < 2 ? 600 : 300}
                                 />
-                                <div className="portfolio__overlay" aria-hidden="true"></div>
+                                <div className="portfolio__overlay"></div>
 
-                                {/* Location Badge - Top Left */}
-                                <div className="portfolio__location-badge">
-                                    <span className="material-icons portfolio__location-icon" aria-hidden="true">
-                                        place
-                                    </span>
-                                    <span className="portfolio__location-text">{item.location}</span>
+                                <div className="portfolio__content">
+                                    {/* Show Title on larger cards or all cards? Snippet shows title on 1, 2, 5. 3 and 4 only have 'Lihat Tour'.
+                                        I will consistently show titles for better UX, or follow snippet exactly? 
+                                        Snippet: Item 3 (Modern House) and 4 (Bali Retreat) have NO title, only play button.
+                                        I will show Title for all to be safe, or just follow design? 
+                                        Let's show text-sm for all. */}
+
+                                    {(index === 0 || index === 1 || index === 4) && (
+                                        <h3 className={`font-bold text-white ${index === 0 ? 'text-lg' : 'text-sm'}`}>{item.title}</h3>
+                                    )}
+
+                                    <div className="portfolio__meta flex items-center text-white/80 text-xs mt-1 gap-1">
+                                        <span className="material-icons text-sm">play_arrow</span> Lihat Tour
+                                    </div>
                                 </div>
-
-                                {/* Type Badge - Top Right */}
-                                <div className={`portfolio__type-badge ${getTypeBadgeClass(item.type)}`}>
-                                    {item.typeLabel}
-                                </div>
-                            </div>
-
-                            <div className="portfolio__content">
-                                <h3 className="portfolio__card-title">{item.title}</h3>
-                            </div>
-                        </article>
-                    ))}
+                            </article>
+                        );
+                    })}
                 </div>
 
-                {/* View All */}
-                <div className="portfolio__view-all">
-                    <Link to="/portfolio" className="portfolio__button" aria-label="Lihat semua proyek">
-                        Lihat Semua Proyek
-                        <span className="material-icons portfolio__button-icon" aria-hidden="true">
-                            east
-                        </span>
-                    </Link>
+                {/* View More Button */}
+                <div className="portfolio__cta">
+                    <a href="/portfolio" className="portfolio__cta-button">
+                        Lihat Selengkapnya
+                        <span className="material-icons">arrow_forward</span>
+                    </a>
                 </div>
             </div>
         </section>

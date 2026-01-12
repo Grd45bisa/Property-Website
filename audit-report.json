@@ -1,0 +1,127 @@
+{
+    "project_name": "Ruang360 (formerly VirtuTour)",
+    "root_directory": "d:\\Website360\\Web-property",
+    "generated_at": "2026-01-12T14:20:00+07:00",
+    "file_structure": {
+        "src": {
+            "assets": [
+                "react.svg"
+            ],
+            "components": "Contains modular components (Navbar, Footer, Hero, Portfolio, etc.)",
+            "data": "Data files (blogPosts.ts, sql scripts)",
+            "lib": "Utility libraries (Supabase client)",
+            "pages": "Route components (Home, Dashboard, Portfolio, Tour, Login)",
+            "styles": [
+                "base.css",
+                "variables.css"
+            ],
+            "utils": "Helper functions (seo.ts)"
+        },
+        "public": {
+            "Logo": [
+                "Logo_Ruang360.ico",
+                "Logo_Ruang360.webp"
+            ],
+            "files": [
+                "vite.svg"
+            ]
+        }
+    },
+    "images": [
+        {
+            "path": "public/Logo/Logo_Ruang360.webp",
+            "format": "webp",
+            "usage": "Navbar Logo (Desktop), Branding",
+            "recommendation": "Optimal format. Ensure varying sizes for responsive display if needed."
+        },
+        {
+            "path": "public/Logo/Logo_Ruang360.ico",
+            "format": "ico",
+            "usage": "Favicon, Mobile Navbar Logo",
+            "recommendation": "Good for favicon."
+        },
+        {
+            "path": "src/assets/react.svg",
+            "format": "svg",
+            "usage": "Unused/Default Vite Asset",
+            "recommendation": "Remove if not used."
+        },
+        {
+            "path": "public/vite.svg",
+            "format": "svg",
+            "usage": "Unused/Default Vite Asset",
+            "recommendation": "Remove if not used."
+        }
+    ],
+    "external_images": "Content relies heavily on unsplash.com images (Hero, Portfolio, etc.). Recommendation: Host critical assets locally for better performance and reliability.",
+    "css_js_files": [
+        "src/main.tsx (Entry)",
+        "src/App.tsx (Router & Layout)",
+        "src/styles/variables.css (Design Tokens)",
+        "src/styles/base.css (Global Styles & Utilities)",
+        "src/components/**/*.css (Component-scoped styles)",
+        "src/pages/**/*.css (Page-scoped styles)"
+    ],
+    "dependencies": {
+        "production": [
+            "@radix-ui/react-popover",
+            "@supabase/supabase-js",
+            "leaflet",
+            "lucide-react",
+            "pannellum",
+            "react",
+            "react-dom",
+            "react-leaflet",
+            "react-router-dom"
+        ],
+        "development": [
+            "typescript",
+            "vite",
+            "eslint"
+        ]
+    },
+    "fonts": [
+        {
+            "name": "Inter",
+            "type": "Google Font",
+            "weights": [
+                400,
+                500,
+                600,
+                700,
+                800
+            ],
+            "usage": "Primary user interface font"
+        },
+        {
+            "name": "Material Symbols Outlined",
+            "type": "Icon Font",
+            "usage": "UI Icons"
+        }
+    ],
+    "third_party_scripts": [
+        {
+            "name": "Schema.org JSON-LD",
+            "type": "SEO / Structured Data",
+            "location": "index.html"
+        }
+    ],
+    "brand_text_issues": [
+        {
+            "term": "VirtuTour",
+            "locations": [
+                "index.html (Title Tag, Meta Description, Meta Author, OpenGraph Title, JSON-LD Name)",
+                "src/utils/seo.ts (Likely site title config)",
+                "src/components/Footer.tsx (Potential matches in links or comments)"
+            ],
+            "recommendation": "Replace all instances with 'Ruang360' to match new branding."
+        }
+    ],
+    "recommendations": [
+        "Update 'index.html' meta tags and title to reflect 'Ruang360'.",
+        "Check 'src/utils/seo.ts' for hardcoded brand names.",
+        "Remove unused default assets (react.svg, vite.svg).",
+        "Replace Unsplash placeholers with real project images when available.",
+        "Add 'robots.txt' and 'sitemap.xml' for better SEO indexing."
+    ]
+}

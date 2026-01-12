@@ -1,13 +1,22 @@
 import React from 'react';
+import OptimizedImage from '../OptimizedImage';
 import './Hero.css';
 
 const Hero: React.FC = () => {
     return (
-        <header
-            className="hero"
-            style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80)' }}
-            role="banner"
-        >
+        <header className="hero" role="banner">
+            {/* Optimized Background Image */}
+            <div className="hero__bg-wrapper">
+                <OptimizedImage
+                    baseName="hero-new"
+                    alt="Interior properti mewah dengan virtual tour"
+                    className="hero__bg-image"
+                    width={1920}
+                    height={1080}
+                    priority={true}
+                />
+            </div>
+
             {/* Overlay */}
             <div className="hero__overlay" aria-hidden="true"></div>
 

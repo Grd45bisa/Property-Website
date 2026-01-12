@@ -22,11 +22,22 @@ const Navbar: React.FC = () => {
     ];
 
     useEffect(() => {
+        let rafId: number | null = null;
+
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
+            if (rafId !== null) return;
+
+            rafId = requestAnimationFrame(() => {
+                setIsScrolled(window.scrollY > 10);
+                rafId = null;
+            });
         };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            if (rafId !== null) cancelAnimationFrame(rafId);
+        };
     }, []);
 
     // Prevent body scroll when mobile menu is open
@@ -54,11 +65,11 @@ const Navbar: React.FC = () => {
             >
                 <div className="navbar__container">
                     {/* Logo */}
-                    <Link to="/" className="navbar__logo" aria-label="VirtuTour Home">
-                        <span className="material-icons navbar__logo-icon" aria-hidden="true">
-                            view_in_ar
-                        </span>
-                        <span className="navbar__logo-text">VirtuTour</span>
+                    <Link to="/" className="navbar__logo" aria-label="Ruang360 Home">
+                        <div className="navbar__logo-wrapper">
+                            <img src="/Logo/Logo_Ruang360_small.webp" alt="Ruang360 Logo" className="navbar__logo-icon" />
+                            <span className="navbar__logo-text">Ruang360</span>
+                        </div>
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -123,10 +134,10 @@ const Navbar: React.FC = () => {
             >
                 <div className="navbar__mobile-header">
                     <Link to="/" className="navbar__logo" onClick={handleLinkClick}>
-                        <span className="material-icons navbar__logo-icon" aria-hidden="true">
-                            view_in_ar
-                        </span>
-                        <span className="navbar__logo-text">VirtuTour</span>
+                        <div className="navbar__logo-wrapper">
+                            <img src="/Logo/Logo_Ruang360.ico" alt="Ruang360 Logo" className="navbar__logo-icon" />
+                            <span className="navbar__logo-text">Ruang360</span>
+                        </div>
                     </Link>
                     <button
                         className="navbar__mobile-close"

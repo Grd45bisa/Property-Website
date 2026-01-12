@@ -9,13 +9,19 @@
     left: 0;
     right: 0;
     z-index: var(--z-sticky);
-    background-color: var(--color-white);
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition-normal);
+    background-color: rgba(255, 255, 255, 0.95);
+    /* Slightly transparent */
+    backdrop-filter: blur(12px);
+    /* Premium blur effect */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    /* Subtle border */
+    transition: all var(--transition-normal);
 }
 
 .navbar--scrolled {
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    /* Softer shadow */
+    background-color: rgba(255, 255, 255, 0.98);
 }
 
 /* Container */
@@ -25,7 +31,10 @@
     justify-content: space-between;
     max-width: var(--container-max);
     margin: 0 auto;
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: var(--spacing-4);
+    /* Increased breathing room */
+    height: 64px;
+    /* Fixed height for consistency */
 }
 
 @media (min-width: 768px) {
@@ -44,19 +53,28 @@
 .navbar__logo {
     display: flex;
     align-items: center;
-    gap: var(--spacing-2);
     text-decoration: none;
 }
 
+.navbar__logo-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
 .navbar__logo-icon {
+    width: 32px;
+    height: 32px;
     color: var(--color-primary);
-    font-size: 28px;
+    border-radius: 8px;
+    /* Rounded corners as requested: "tumpul" */
 }
 
 .navbar__logo-text {
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-bold);
-    color: var(--color-gray-900);
+    color: var(--color-primary);
+    /* Use primary color for text */
 }
 
 @media (min-width: 640px) {
@@ -157,33 +175,29 @@
 
 /* Mobile Menu */
 .navbar__mobile {
-    display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--color-white);
+    inset: 0;
+    /* Cover entire screen */
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
     z-index: var(--z-modal);
+    display: flex;
     flex-direction: column;
-    padding: var(--spacing-4);
-    animation: slideDown 0.3s ease;
+    padding: var(--spacing-6);
+
+    /* Animation State: Hidden */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Smooth ease-out */
 }
 
 .navbar__mobile--open {
-    display: flex;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    /* Animation State: Visible */
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .navbar__mobile-header {
@@ -194,38 +208,65 @@
 }
 
 .navbar__mobile-close {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
     border: none;
     cursor: pointer;
     color: var(--color-gray-700);
+    transition: all var(--transition-fast);
+}
+
+.navbar__mobile-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--color-primary);
+    transform: rotate(90deg);
 }
 
 .navbar__mobile-nav {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-1);
+    gap: var(--spacing-3);
+    flex: 1;
+    /* Push CTA to bottom */
 }
 
 .navbar__mobile-link {
     display: flex;
     align-items: center;
-    padding: var(--spacing-4);
+    justify-content: space-between;
+    /* Add arrow or just text */
+    padding: var(--spacing-4) var(--spacing-6);
     color: var(--color-gray-700);
     font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-bold);
     text-decoration: none;
-    border-radius: var(--radius-lg);
-    transition: background-color var(--transition-fast), color var(--transition-fast);
+    border-radius: var(--radius-xl);
+    background-color: transparent;
+    transition: all var(--transition-fast);
 }
 
 .navbar__mobile-link:hover {
-    background-color: var(--color-gray-50);
+    background-color: rgba(54, 62, 69, 0.05);
+    /* var(--color-primary-light) approx */
     color: var(--color-primary);
+    transform: translateX(4px);
+}
+
+.navbar__mobile-link::after {
+    content: '→';
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all var(--transition-fast);
+}
+
+.navbar__mobile-link:hover::after {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .navbar__mobile-cta {
@@ -241,20 +282,25 @@
     font-size: var(--font-size-base);
     font-weight: var(--font-weight-bold);
     text-decoration: none;
+    box-shadow: 0 4px 15px rgba(54, 62, 69, 0.3);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .navbar__mobile-cta:hover {
     background-color: var(--color-primary-dark);
     color: var(--color-white);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(54, 62, 69, 0.4);
 }
 
 /* Spacer for fixed navbar */
 .navbar-spacer {
-    height: 60px;
+    height: 55px;
+    /* Match new navbar height */
 }
 
 @media (min-width: 768px) {
     .navbar-spacer {
-        height: 72px;
+        height: 60px;
     }
 }

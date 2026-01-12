@@ -1,39 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
   <url>
-    <loc>https://virtutour.id/</loc>
-    <lastmod>2024-01-15</lastmod>
+    <loc>https://ruang360.com/</loc>
+    <lastmod>2026-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://ruang360.com/Hero/photo_hero.avif</image:loc>
+      <image:title>Ruang360 Virtual Tour Interior</image:title>
+    </image:image>
   </url>
+  
+  <!-- Demo Page -->
   <url>
-    <loc>https://virtutour.id/demo</loc>
-    <lastmod>2024-01-15</lastmod>
+    <loc>https://ruang360.com/demo</loc>
+    <lastmod>2026-01-12</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
+  
+  <!-- Portfolio Page -->
   <url>
-    <loc>https://virtutour.id/blog</loc>
-    <lastmod>2024-01-15</lastmod>
+    <loc>https://ruang360.com/portfolio</loc>
+    <lastmod>2026-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://ruang360.com/portofolio/photo1.avif</image:loc>
+      <image:title>Luxury Villa Canggu Virtual Tour</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://ruang360.com/portofolio/photo2.avif</image:loc>
+      <image:title>Jakarta Apartment Virtual Tour</image:title>
+    </image:image>
   </url>
+  
+  <!-- Blog List -->
   <url>
-    <loc>https://virtutour.id/blog/virtual-tour-closing-rate</loc>
+    <loc>https://ruang360.com/blog</loc>
+    <lastmod>2026-01-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Blog Posts -->
+  <url>
+    <loc>https://ruang360.com/blog/virtual-tour-closing-rate</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
+  
   <url>
-    <loc>https://virtutour.id/blog/apa-itu-virtual-tour</loc>
+    <loc>https://ruang360.com/blog/apa-itu-virtual-tour</loc>
     <lastmod>2024-01-10</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
+  
   <url>
-    <loc>https://virtutour.id/blog/case-study-villa-canggu</loc>
+    <loc>https://ruang360.com/blog/case-study-villa-canggu</loc>
     <lastmod>2024-01-05</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.6</priority>
   </url>
+  
+  <!-- Login Page (noindex but in sitemap for crawling) -->
+  <url>
+    <loc>https://ruang360.com/login</loc>
+    <lastmod>2026-01-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
 </urlset>

@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-// Components
+// Critical Components (loaded immediately for homepage)
 import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar/Navbar';
 import Hero from './components/Hero/Hero';
@@ -10,12 +10,12 @@ import ProblemSolution from './components/ProblemSolution/ProblemSolution';
 import Portfolio from './components/Portfolio/Portfolio';
 import Process from './components/Process/Process';
 import Footer from './components/Footer/Footer';
-import PortfolioPage from './pages/PortfolioPage';
-import DashboardPage from './pages/DashboardPage';
-import EditTourPage from './pages/EditTourPage';
-import LoginPage from './pages/LoginPage';
 
-// Lazy loaded pages for code splitting
+// Lazy loaded pages for code splitting (reduces initial bundle size)
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const EditTourPage = lazy(() => import('./pages/EditTourPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 const DemoTourPage = lazy(() => import('./pages/DemoTourPage'));
@@ -45,10 +45,14 @@ const PageLoader: React.FC = () => (
 const HomePage: React.FC = () => {
   return (
     <div className="page">
+      {/* Skip to Main Content - Accessibility */}
+      <a href="#main-content" className="skip-to-content">
+        Langsung ke Konten Utama
+      </a>
       <Navbar />
       <Hero />
       <TrustLogos />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <ProblemSolution />
         <Portfolio />
         <Process />

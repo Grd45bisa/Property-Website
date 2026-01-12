@@ -1,18 +1,19 @@
 /* ========================================
-   VirtuTour - CSS Variables
+   Ruang360 - CSS Variables
    Global design tokens for consistency
    ======================================== */
 
 :root {
     /* ===== COLORS ===== */
-    --color-primary: #22c55e;
-    --color-primary-dark: #16a34a;
-    --color-primary-light: rgba(34, 197, 94, 0.1);
+    --color-primary: #363e45;
+    --color-primary-dark: #2c333a;
+    --color-primary-light: rgba(54, 62, 69, 0.1);
 
-    --color-secondary: #1f2937;
-    --color-secondary-dark: #111827;
+    --color-secondary: #bfbebd;
+    --color-secondary-dark: #a6a5a4;
 
-    --color-accent: #f97316;
+    --color-accent: #bfbebd;
+    /* Using secondary as accent for now to match palette, or keep orange if needed? User asked for these 3 specific colors */
 
     /* Neutrals */
     --color-white: #ffffff;
@@ -114,13 +115,13 @@
     /* 24px */
     --radius-full: 9999px;
 
-    /* ===== SHADOWS ===== */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-primary: 0 10px 25px rgba(34, 197, 94, 0.3);
+    /* ===== SHADOWS (Flattened/Reduced) ===== */
+    --shadow-sm: none;
+    --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    --shadow-2xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+    --shadow-primary: none;
 
     /* ===== TRANSITIONS ===== */
     --transition-fast: 150ms ease;

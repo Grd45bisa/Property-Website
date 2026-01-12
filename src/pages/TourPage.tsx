@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import './DemoTourPage.css'; // Reuse existing styles
 
@@ -30,12 +30,11 @@ interface HotSpot {
 
 const TourPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [searchParams] = useSearchParams();
-    const isEmbed = searchParams.get('embed') === 'true';
 
     const viewerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null); // Container for fullscreen
     const pannellumInstance = useRef<any>(null);
-    const navigate = useNavigate();
+
 
     const [tourTitle, setTourTitle] = useState('');
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -50,10 +49,18 @@ const TourPage: React.FC = () => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const hasPlayedIntro = useRef(false);
     const lastObjectUrl = useRef<string | null>(null);
+    // Store viewing direction for scene transitions
+    const savedViewDirection = useRef<{ pitch: number; yaw: number } | null>(null);
 
     // Nadir State
     const [nadirUrl, setNadirUrl] = useState<string | null>(null);
     const [nadirEnabled, setNadirEnabled] = useState(false);
+    const [minPitch, setMinPitch] = useState<number>(-90); // Pitch limit from tour settings
+
+    // Client Branding
+    const [clientName, setClientName] = useState<string>('');
+    const [clientLogo, setClientLogo] = useState<string>('');
+    const [clientUrl, setClientUrl] = useState<string>('');
 
     // Get current room data
     useEffect(() => {
@@ -65,7 +72,7 @@ const TourPage: React.FC = () => {
                 // 1. Fetch Tour Info
                 const { data: tourData, error: tourError } = await supabase
                     .from('tours')
-                    .select('title, nadir_image_url, nadir_enabled')
+                    .select('title, nadir_image_url, nadir_enabled, min_pitch, client_name, client_logo, client_url')
                     .eq('id', id)
                     .single();
 
@@ -74,6 +81,10 @@ const TourPage: React.FC = () => {
                 if (tourData) {
                     setNadirUrl(tourData.nadir_image_url || null);
                     setNadirEnabled(tourData.nadir_enabled || false);
+                    setMinPitch(tourData.min_pitch ?? -90);
+                    setClientName(tourData.client_name || '');
+                    setClientLogo(tourData.client_logo || '');
+                    setClientUrl(tourData.client_url || '');
                 }
 
                 // 2. Fetch Rooms
@@ -194,6 +205,13 @@ const TourPage: React.FC = () => {
                 },
                 clickHandlerFunc: () => {
                     if (hs.type === 'scene' && hs.targetRoomId) {
+                        // Save current viewing direction before transitioning
+                        if (pannellumInstance.current) {
+                            savedViewDirection.current = {
+                                pitch: pannellumInstance.current.getPitch(),
+                                yaw: pannellumInstance.current.getYaw()
+                            };
+                        }
                         setIsTransitioning(true);
                         setTimeout(() => {
                             setCurrentRoomId(hs.targetRoomId!);
@@ -303,6 +321,22 @@ const TourPage: React.FC = () => {
                     pannellumInstance.current.destroy();
                 }
 
+                // Determine initial viewing direction
+                // Use saved direction if transitioning, otherwise intro animation or default
+                let initialPitch = 0;
+                let initialYaw = 0;
+                let initialHfov = 100;
+
+                if (savedViewDirection.current && hasPlayedIntro.current) {
+                    // Transitioning between scenes - keep same direction
+                    initialPitch = savedViewDirection.current.pitch;
+                    initialYaw = savedViewDirection.current.yaw;
+                } else if (!hasPlayedIntro.current) {
+                    // First load - tiny planet intro
+                    initialPitch = -90;
+                    initialHfov = 150;
+                }
+
                 // First time initialization - create new viewer
                 pannellumInstance.current = window.pannellum.viewer(viewerRef.current, {
                     type: 'equirectangular',
@@ -311,8 +345,11 @@ const TourPage: React.FC = () => {
                     showControls: false,
                     showFullscreenCtrl: false,
                     showZoomCtrl: false,
-                    pitch: hasPlayedIntro.current ? 0 : -90, // Start at bottom (tiny planet)
-                    hfov: hasPlayedIntro.current ? 100 : 150, // Start zoomed out
+                    pitch: initialPitch,
+                    yaw: initialYaw,
+                    hfov: initialHfov,
+                    minPitch: minPitch, // Apply pitch limit from settings
+                    maxPitch: 90,
                     mouseZoom: true,
                     draggable: true,
                     friction: 0.15,
@@ -320,6 +357,9 @@ const TourPage: React.FC = () => {
                     hotSpots: hotSpots,
                     preview: undefined
                 });
+
+                // Clear saved direction after using it
+                savedViewDirection.current = null;
 
                 // Listen for initial load
                 pannellumInstance.current.on('load', () => {
@@ -348,33 +388,18 @@ const TourPage: React.FC = () => {
                     setIsTransitioning(false);
                 });
 
-                // Step 2: If we showed blur, load full quality in background and swap
-                if (currentRoom.thumbnail) {
+                // Note: setPanorama is not available in single panorama mode
+                // Just preload/process image for memory optimization (for future scene switches)
+                // The viewer already has the correct image loaded via the 'panorama' option
+                if (!currentRoom.thumbnail) {
+                    // Preprocess and cache resized image for memory management
                     loadAndResizeImage(currentRoom.image).then((processedImage) => {
-                        if (!pannellumInstance.current) return;
-
-                        // Track blob URL if resized
+                        // Track blob URL if resized (for cleanup on scene change)
                         if (processedImage.startsWith('blob:')) {
                             lastObjectUrl.current = processedImage;
                         }
-
-                        // Swap to full quality (Pannellum API)
-                        pannellumInstance.current.setPanorama(processedImage);
-                    }).catch(err => console.warn('Full image load failed:', err));
-                } else {
-                    // No blur placeholder, process full image normally
-                    loadAndResizeImage(currentRoom.image).then((processedImage) => {
-                        if (!pannellumInstance.current) return;
-
-                        if (processedImage.startsWith('blob:')) {
-                            lastObjectUrl.current = processedImage;
-                        }
-
-                        // Only set if different from original
-                        if (processedImage !== currentRoom.image) {
-                            pannellumInstance.current.setPanorama(processedImage);
-                        }
-                    }).catch(err => console.warn('Image processing failed:', err));
+                        // Image is now in browser cache for faster scene transitions
+                    }).catch(err => console.warn('Image preprocess failed:', err));
                 }
             };
 
@@ -406,6 +431,8 @@ const TourPage: React.FC = () => {
         };
     }, [currentRoomId, currentRoom, nadirEnabled, nadirUrl]);
 
+
+
     // Controls
     const handleZoomIn = () => {
         if (pannellumInstance.current) {
@@ -423,13 +450,13 @@ const TourPage: React.FC = () => {
 
     const handleFullscreen = () => {
         if (!document.fullscreenElement) {
-            // Enter Fullscreen
-            if (viewerRef.current?.requestFullscreen) {
-                viewerRef.current.requestFullscreen();
-            } else if ((viewerRef.current as any)?.webkitRequestFullscreen) {
-                (viewerRef.current as any).webkitRequestFullscreen();
-            } else if ((viewerRef.current as any)?.msRequestFullscreen) {
-                (viewerRef.current as any).msRequestFullscreen();
+            // Enter Fullscreen - use containerRef to include all UI
+            if (containerRef.current?.requestFullscreen) {
+                containerRef.current.requestFullscreen();
+            } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
+                (containerRef.current as any).webkitRequestFullscreen();
+            } else if ((containerRef.current as any)?.msRequestFullscreen) {
+                (containerRef.current as any).msRequestFullscreen();
             }
             setIsMaximized(true);
         } else {
@@ -483,10 +510,7 @@ const TourPage: React.FC = () => {
             <div className="demo-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: 'white' }}>
                 <h2 style={{ marginBottom: '1rem' }}>Oops!</h2>
                 <p>{errorMsg}</p>
-                <button onClick={() => navigate('/portfolio')} className="demo-page__back" style={{ position: 'static', marginTop: '2rem' }}>
-                    <span className="material-icons demo-page__back-icon">arrow_back</span>
-                    <span className="demo-page__back-text">Kembali ke Portfolio</span>
-                </button>
+
             </div>
         );
     }
@@ -494,7 +518,7 @@ const TourPage: React.FC = () => {
     if (!currentRoom) return <div className="demo-page" />;
 
     return (
-        <div className={`demo-page ${isMaximized ? 'demo-page--maximized' : ''}`}>
+        <div ref={containerRef} className={`demo-page ${isMaximized ? 'demo-page--maximized' : ''}`}>
             {/* Viewer */}
             <div
                 ref={viewerRef}
@@ -542,8 +566,42 @@ const TourPage: React.FC = () => {
                 </div>
             )}
 
+            {/* Client Logo - Only show if client name or logo is set */}
+            {/* Client Logo - Only show if client name or logo is set */}
+            {(clientName || clientLogo) && (
+                <div className="demo-page__logo">
+                    {clientUrl ? (
+                        <a
+                            href={clientUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="demo-page__logo-inner"
+                            style={{ textDecoration: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                            {clientLogo ? (
+                                <img src={clientLogo} alt={clientName || 'Client Logo'} style={{ height: '24px', objectFit: 'contain', borderRadius: '4px' }} />
+                            ) : (
+                                <span className="material-icons demo-page__logo-icon">view_in_ar</span>
+                            )}
+                            {clientName && <span className="demo-page__logo-text">{clientName}</span>}
+                        </a>
+                    ) : (
+                        <div className="demo-page__logo-inner">
+                            {clientLogo ? (
+                                <img src={clientLogo} alt={clientName || 'Client Logo'} style={{ height: '24px', objectFit: 'contain', borderRadius: '4px' }} />
+                            ) : (
+                                <span className="material-icons demo-page__logo-icon">view_in_ar</span>
+                            )}
+                            {clientName && <span className="demo-page__logo-text">{clientName}</span>}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Title - Reuse demo styles */}
-            <div className={`demo-page__title ${isMaximized ? 'hidden' : ''}`}>
+            <div className="demo-page__title">
                 <div className="demo-page__title-inner">
                     <h1 className="demo-page__title-text">{tourTitle}</h1>
                     <p className="demo-page__title-room">{currentRoom.name}</p>
@@ -576,16 +634,11 @@ const TourPage: React.FC = () => {
             </div>
 
             {/* Back Button - Hide if Embed */}
-            {!isEmbed && (
-                <button onClick={() => navigate(-1)} className={`demo-page__back ${isMaximized ? 'hidden' : ''}`}>
-                    <span className="material-icons demo-page__back-icon">arrow_back</span>
-                    <span className="demo-page__back-text">Kembali</span>
-                </button>
-            )}
+
 
             {/* Room Selector */}
             {rooms.length > 1 && (
-                <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''} ${isMaximized ? 'hidden' : ''}`}>
+                <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>
                     <button className="demo-page__room-toggle" onClick={() => setIsRoomSelectorOpen(!isRoomSelectorOpen)}>
                         <span className="demo-page__room-toggle-label">
                             <span className="material-icons">meeting_room</span>

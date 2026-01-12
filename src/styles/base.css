@@ -1,5 +1,5 @@
 /* ========================================
-   VirtuTour - Base Styles
+   Ruang360 - Base Styles
    Reset, typography, and utility classes
    ======================================== */
 
@@ -161,11 +161,19 @@ select:focus {
 }
 
 /* ===== ACCESSIBILITY ===== */
+
+/* Focus Visible - High visibility outline for keyboard users */
 :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 3px solid var(--color-primary);
     outline-offset: 2px;
 }
 
+/* Remove outline for mouse users but keep for keyboard */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Screen Reader Only - Hidden but accessible */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -176,6 +184,65 @@ select:focus {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+}
+
+/* Skip to Main Content Link */
+.skip-to-content {
+    position: absolute;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: var(--spacing-3) var(--spacing-6);
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+    border-radius: var(--radius-lg);
+    transition: top 0.3s;
+}
+
+.skip-to-content:focus {
+    top: var(--spacing-4);
+}
+
+/* Reduced Motion - Respect user preference */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    :root {
+        --color-primary: #000000;
+        --color-primary-dark: #000000;
+    }
+
+    a,
+    button {
+        text-decoration: underline;
+    }
+}
+
+/* Ensure minimum touch targets (44x44px) for mobile */
+@media (pointer: coarse) {
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+        min-width: 44px;
+    }
 }
 
 /* ===== LAYOUT UTILITIES ===== */
@@ -499,16 +566,21 @@ select:focus {
     min-width: 44px;
 }
 
+/* ... (previous styles) ... */
+
 .btn--primary {
     background-color: var(--color-primary);
     color: var(--color-white);
-    box-shadow: var(--shadow-primary);
+    box-shadow: none;
+    /* Flattened */
 }
 
 .btn--primary:hover {
     background-color: var(--color-primary-dark);
     transform: translateY(-1px);
 }
+
+/* ... (rest of the file) ... */
 
 .btn--secondary {
     background-color: var(--color-gray-100);
@@ -589,6 +661,23 @@ select:focus {
 
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Fonts */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/inter-400.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/inter-700.ttf') format('truetype');
 }
 
 /* ===== MATERIAL ICONS ===== */

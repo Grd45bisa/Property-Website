@@ -614,6 +614,57 @@
 
 .embed-preview__frame {
     background: var(--color-gray-100);
+    position: relative;
+    /* Ensure overlay stays within rounded corners */
+    overflow: hidden !important;
+}
+
+.embed-preview__overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+    z-index: 10;
+}
+
+.embed-preview__controls {
+    position: absolute;
+    bottom: var(--spacing-4);
+    right: var(--spacing-4);
+    display: flex;
+    gap: var(--spacing-2);
+    z-index: 20;
+    pointer-events: none;
+    /* Let clicks pass through if needed, but buttons need events */
+}
+
+/* Enable pointer events on buttons themselves */
+.embed-preview__controls>* {
+    pointer-events: auto;
+}
+
+.embed-preview__icon {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.embed-preview__icon:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.embed-preview__icon span {
+    font-size: 20px;
 }
 
 /* ========================================

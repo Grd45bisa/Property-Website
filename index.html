@@ -3,58 +3,86 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/webp" href="/Logo/favicon-32x32.webp" />
+  <link rel="icon" type="image/x-icon" href="/Logo/Logo_Ruang360.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- PWA & Mobile Optimization -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#363e45" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1d20" />
+  <link rel="apple-touch-icon" href="/Logo/Logo_Ruang360.webp" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ruang360" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Prefetch for likely next navigation -->
+  <link rel="prefetch" href="/demo" />
+  <link rel="prefetch" href="/portfolio" />
+
   <!-- Primary Meta Tags -->
-  <title>VirtuTour - Jasa Virtual Tour 360° Profesional Indonesia | Jual Properti 5x Lebih Cepat</title>
-  <meta name="title" content="VirtuTour - Jasa Virtual Tour 360° Profesional Indonesia" />
+  <title>Ruang360 - Jasa Virtual Tour 360° Profesional Indonesia | Jual Properti 5x Lebih Cepat</title>
+  <meta name="title" content="Ruang360 - Jasa Virtual Tour 360° Profesional Indonesia" />
   <meta name="description"
     content="Tingkatkan penjualan properti Anda dengan virtual tour 360° imersif. Jasa fotografi properti profesional untuk rumah, apartemen, villa di Jakarta dan seluruh Indonesia. Mulai dari Rp 750.000." />
   <meta name="keywords"
-    content="jasa virtual tour Indonesia, virtual tour properti Jakarta, 360 virtual tour rumah, fotografi properti profesional, virtual tour apartemen, virtual tour villa Bali" />
-  <meta name="author" content="VirtuTour" />
+    content="jasa virtual tour Indonesia, virtual tour properti Jakarta, 360 virtual tour rumah, fotografi properti profesional, virtual tour apartemen, virtual tour villa Bali, ruang360" />
+  <meta name="author" content="Ruang360" />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://virtutour.id/" />
+  <link rel="canonical" href="https://ruang360.com/" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://virtutour.id/" />
-  <meta property="og:title" content="VirtuTour - Jasa Virtual Tour 360° Profesional Indonesia" />
+  <meta property="og:url" content="https://ruang360.com/" />
+  <meta property="og:title" content="Ruang360 - Jasa Virtual Tour 360° Profesional Indonesia" />
   <meta property="og:description"
     content="Tingkatkan penjualan properti Anda dengan virtual tour 360° imersif. Jual properti 5x lebih cepat dengan pengalaman imersif." />
-  <meta property="og:image" content="https://virtutour.id/og-image.jpg" />
-  <meta property="og:site_name" content="VirtuTour" />
+  <meta property="og:image" content="https://ruang360.com/og-image.jpg" />
+  <meta property="og:site_name" content="Ruang360" />
   <meta property="og:locale" content="id_ID" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content="https://virtutour.id/" />
-  <meta name="twitter:title" content="VirtuTour - Jasa Virtual Tour 360° Profesional Indonesia" />
+  <meta name="twitter:url" content="https://ruang360.com/" />
+  <meta name="twitter:title" content="Ruang360 - Jasa Virtual Tour 360° Profesional Indonesia" />
   <meta name="twitter:description"
     content="Tingkatkan penjualan properti Anda dengan virtual tour 360° imersif. Jual properti 5x lebih cepat." />
-  <meta name="twitter:image" content="https://virtutour.id/og-image.jpg" />
+  <meta name="twitter:image" content="https://ruang360.com/og-image.jpg" />
 
   <!-- Preconnect for performance -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://d1rzpg1r7cxehl.cloudfront.net" />
+  <link rel="dns-prefetch" href="https://d1rzpg1r7cxehl.cloudfront.net" />
 
-  <!-- Google Fonts - Critical fonts only -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- DNS Prefetch for third-party domains (faster connection) -->
+  <link rel="dns-prefetch" href="https://yzlgszmxcxxskbudhbrh.supabase.co" />
+  <link rel="dns-prefetch" href="https://www.youtube.com" />
+  <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
-  <!-- Material Symbols -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,0&display=swap"
-    rel="stylesheet" />
+  <!-- Preload LCP Resource (Hero Image) - Critical for Core Web Vitals -->
+  <link rel="preload" as="image" href="/Hero/photo_hero.avif" type="image/avif" fetchpriority="high" />
+
+  <!-- Preload Logo (Above Fold) -->
+  <link rel="preload" as="image" href="/Logo/Logo_Ruang360_small.webp" type="image/webp" />
+
+  <!-- Preload Critical Fonts (Self-hosted) -->
+  <link rel="preload" as="font" href="/fonts/inter-400.ttf" type="font/ttf" crossorigin />
+
+  <!-- Material Symbols (Managed via CSS import or async load) -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,0&display=swap" media="print"
+    onload="this.media='all'" />
 
   <!-- Schema.org Structured Data -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
-      "name": "VirtuTour",
+      "name": "Ruang360",
       "description": "Jasa virtual tour 360° profesional untuk properti di Indonesia",
-      "image": "https://virtutour.id/og-image.jpg",
-      "url": "https://virtutour.id",
+      "image": "https://ruang360.com/og-image.jpg",
+      "url": "https://ruang360.com",
       "telephone": "+6281234567890",
       "address": {
         "@type": "PostalAddress",
@@ -73,7 +101,7 @@
       "name": "Virtual Tour 360° Properti",
       "provider": {
         "@type": "LocalBusiness",
-        "name": "VirtuTour"
+        "name": "Ruang360"
       },
       "description": "Layanan pembuatan virtual tour 360° untuk properti",
       "areaServed": {
@@ -81,12 +109,90 @@
         "name": "Indonesia"
       }
     }
-    </script>
+  </script>
+
+  <!-- WebSite Schema with SearchAction -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Ruang360",
+      "url": "https://ruang360.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://ruang360.com/portfolio?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+  </script>
+
+  <!-- Organization Schema -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Ruang360",
+      "url": "https://ruang360.com",
+      "logo": "https://ruang360.com/Logo/Logo_Ruang360.webp",
+      "sameAs": [
+        "https://instagram.com/ruang360.id",
+        "https://facebook.com/ruang360.id"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+6281234567890",
+        "contactType": "customer service",
+        "availableLanguage": ["Indonesian", "English"]
+      }
+    }
+  </script>
+
+  <!-- BreadcrumbList Schema (Homepage) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Beranda",
+          "item": "https://ruang360.com"
+        }
+      ]
+    }
+  </script>
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((reg) => {
+            console.log('[App] Service Worker registered');
+            // Check for updates
+            reg.onupdatefound = () => {
+              const newWorker = reg.installing;
+              newWorker.onstatechange = () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version available
+                  if (confirm('Versi baru tersedia! Muat ulang untuk update?')) {
+                    newWorker.postMessage('SKIP_WAITING');
+                    window.location.reload();
+                  }
+                }
+              };
+            };
+          })
+          .catch((err) => console.log('[App] SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 
 </html>

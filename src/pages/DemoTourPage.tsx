@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './DemoTourPage.css';
 
 // Declare pannellum on window
@@ -28,7 +27,7 @@ interface HotSpot {
 const DemoTourPage: React.FC = () => {
     const viewerRef = useRef<HTMLDivElement>(null);
     const pannellumInstance = useRef<any>(null);
-    const navigate = useNavigate();
+
     const [currentRoomId, setCurrentRoomId] = useState('living-room');
     const [isLoading, setIsLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -288,7 +287,7 @@ const DemoTourPage: React.FC = () => {
             <div className="demo-page__logo">
                 <div className="demo-page__logo-inner">
                     <span className="material-icons demo-page__logo-icon">view_in_ar</span>
-                    <span className="demo-page__logo-text">Client Logo</span>
+                    <span className="demo-page__logo-text">Client Name</span>
                 </div>
             </div>
 
@@ -316,10 +315,18 @@ const DemoTourPage: React.FC = () => {
                 <button onClick={handleZoomOut} className="demo-page__control-btn" aria-label="Zoom out">
                     <span className="material-icons demo-page__control-icon">remove</span>
                 </button>
-                <button onClick={handleFullscreen} className="demo-page__control-btn" aria-label={isMaximized ? "Exit Fullscreen" : "Fullscreen"}>
-                    <span className="material-icons demo-page__control-icon">{isMaximized ? 'fullscreen_exit' : 'fullscreen'}</span>
-                </button>
             </div>
+
+            {/* Fullscreen Button - Separate */}
+            <button
+                onClick={handleFullscreen}
+                className="demo-page__fullscreen-btn"
+                aria-label={isMaximized ? "Exit Fullscreen" : "Fullscreen"}
+            >
+                <span className="material-icons demo-page__control-icon">
+                    {isMaximized ? 'fullscreen_exit' : 'fullscreen'}
+                </span>
+            </button>
 
             {/* WhatsApp Button */}
             <a
@@ -333,10 +340,7 @@ const DemoTourPage: React.FC = () => {
             </a>
 
             {/* Back Button */}
-            <button onClick={() => navigate(-1)} className="demo-page__back">
-                <span className="material-icons demo-page__back-icon">arrow_back</span>
-                <span className="demo-page__back-text">Kembali</span>
-            </button>
+
 
             {/* Room Selector - Collapsible */}
             <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>

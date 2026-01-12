@@ -13,7 +13,7 @@ export interface SEOData {
  * Generate meta tags for SEO
  */
 export const generateMetaTags = (data: SEOData): Record<string, string> => {
-    const baseUrl = 'https://virtutour.id';
+    const baseUrl = 'https://ruang360.com';
     const defaultImage = `${baseUrl}/og-image.jpg`;
 
     return {
@@ -26,7 +26,7 @@ export const generateMetaTags = (data: SEOData): Record<string, string> => {
         'og:image': data.image || defaultImage,
         'og:url': data.url || baseUrl,
         'og:type': data.type || 'website',
-        'og:site_name': 'VirtuTour',
+        'og:site_name': 'Ruang360',
         // Twitter
         'twitter:card': 'summary_large_image',
         'twitter:title': data.title,
@@ -41,10 +41,10 @@ export const generateMetaTags = (data: SEOData): Record<string, string> => {
 export const generateLocalBusinessSchema = () => ({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
-    name: 'VirtuTour',
+    name: 'Ruang360',
     description: 'Jasa virtual tour 360° profesional untuk properti di Indonesia',
-    image: 'https://virtutour.id/og-image.jpg',
-    url: 'https://virtutour.id',
+    image: 'https://ruang360.com/og-image.jpg',
+    url: 'https://ruang360.com',
     telephone: '+6281234567890',
     address: {
         '@type': 'PostalAddress',
@@ -54,8 +54,8 @@ export const generateLocalBusinessSchema = () => ({
     priceRange: 'Rp 750.000 - Rp 3.500.000',
     openingHours: 'Mo-Fr 09:00-18:00',
     sameAs: [
-        'https://instagram.com/virtutour',
-        'https://facebook.com/virtutour',
+        'https://instagram.com/ruang360.id',
+        'https://facebook.com/ruang360.id',
     ],
 });
 
@@ -68,7 +68,7 @@ export const generateServiceSchema = () => ({
     name: 'Virtual Tour 360° Properti',
     provider: {
         '@type': 'LocalBusiness',
-        name: 'VirtuTour',
+        name: 'Ruang360',
     },
     description: 'Layanan pembuatan virtual tour 360° untuk properti. Tingkatkan penjualan properti Anda dengan pengalaman imersif.',
     areaServed: {
@@ -136,10 +136,10 @@ export const generateArticleSchema = (article: {
     },
     publisher: {
         '@type': 'Organization',
-        name: 'VirtuTour',
+        name: 'Ruang360',
         logo: {
             '@type': 'ImageObject',
-            url: 'https://virtutour.id/logo.png',
+            url: 'https://ruang360.com/logo.png',
         },
     },
     mainEntityOfPage: {

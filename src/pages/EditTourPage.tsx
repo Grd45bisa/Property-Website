@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import VirtualTourEditor from '../components/Editor/VirtualTourEditor';
@@ -31,7 +31,12 @@ const EditTourPage: React.FC = () => {
         price: '',
         agentName: '',
         agentWhatsapp: '',
-        coverImage: ''
+        coverImage: '',
+        clientName: '',
+        clientLogo: '',
+
+        clientUrl: '',
+        category: ''
     });
 
     // Share/Embed state
@@ -39,6 +44,7 @@ const EditTourPage: React.FC = () => {
     const [embedWidth, setEmbedWidth] = useState('100%');
     const [embedHeight, setEmbedHeight] = useState('500');
     const [copied, setCopied] = useState<'link' | 'embed' | null>(null);
+    const previewContainerRef = useRef<HTMLDivElement>(null);
 
     // Generate URLs
     const baseUrl = window.location.origin;
@@ -59,7 +65,12 @@ const EditTourPage: React.FC = () => {
                     price: 'IDR 5.5 M',
                     agentName: 'Demo Agent',
                     agentWhatsapp: '628123456789',
-                    coverImage: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80'
+                    coverImage: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80',
+                    clientName: 'Demo Client',
+                    clientLogo: '',
+
+                    clientUrl: 'https://example.com',
+                    category: 'Villa'
                 });
             } else if (id !== 'new') {
                 fetchTourInfo();
@@ -85,7 +96,12 @@ const EditTourPage: React.FC = () => {
                     price: data.price || '',
                     agentName: data.agent_name || '',
                     agentWhatsapp: data.agent_whatsapp || '',
-                    coverImage: data.thumbnail_url || 'https://via.placeholder.com/800x600?text=No+Cover+Image'
+                    coverImage: data.thumbnail_url || 'https://via.placeholder.com/800x600?text=No+Cover+Image',
+                    clientName: data.client_name || '',
+                    clientLogo: data.client_logo || '',
+
+                    clientUrl: data.client_url || '',
+                    category: data.category || ''
                 });
             }
         } catch (error) {
@@ -93,7 +109,7 @@ const EditTourPage: React.FC = () => {
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -112,6 +128,11 @@ const EditTourPage: React.FC = () => {
                     price: formData.price,
                     agent_name: formData.agentName,
                     agent_whatsapp: formData.agentWhatsapp,
+                    client_name: formData.clientName,
+                    client_logo: formData.clientLogo,
+
+                    client_url: formData.clientUrl,
+                    category: formData.category,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', id);
@@ -131,6 +152,10 @@ const EditTourPage: React.FC = () => {
         setCopied(type);
         setTimeout(() => setCopied(null), 2000);
     };
+
+
+
+
 
     // Navigation items
     const navItems = [
@@ -233,6 +258,25 @@ const EditTourPage: React.FC = () => {
                                 </div>
 
                                 <div className="form-group">
+                                    <label className="form-label">Kategori Properti</label>
+                                    <select
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleChange}
+                                        className="form-input"
+                                    >
+                                        <option value="">Pilih Kategori...</option>
+                                        <option value="Villa">Villa</option>
+                                        <option value="Apartment">Apartment</option>
+                                        <option value="House">House</option>
+                                        <option value="Office">Office</option>
+                                        <option value="Land">Land</option>
+                                        <option value="Commercial">Commercial</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
                                     <label className="form-label">Deskripsi Singkat</label>
                                     <textarea
                                         name="description"
@@ -267,6 +311,43 @@ const EditTourPage: React.FC = () => {
                                             placeholder="Contoh: IDR 2.5 M (Opsional)"
                                         />
                                     </div>
+                                </div>
+
+                                {/* Client Branding */}
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label className="form-label">Nama Client / Developer</label>
+                                        <input
+                                            type="text"
+                                            name="clientName"
+                                            value={formData.clientName}
+                                            onChange={handleChange}
+                                            className="form-input"
+                                            placeholder="Nama yang tampil di logo viewer"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Logo Client (URL)</label>
+                                        <input
+                                            type="text"
+                                            name="clientLogo"
+                                            value={formData.clientLogo}
+                                            onChange={handleChange}
+                                            className="form-input"
+                                            placeholder="https://example.com/logo.png (Opsional)"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Website Client (URL)</label>
+                                    <input
+                                        type="text"
+                                        name="clientUrl"
+                                        value={formData.clientUrl}
+                                        onChange={handleChange}
+                                        className="form-input"
+                                        placeholder="https://example.com (Klik logo akan buka link ini)"
+                                    />
                                 </div>
                             </section>
 
@@ -444,22 +525,62 @@ const EditTourPage: React.FC = () => {
                                         <div className="embed-preview__frame" style={{
                                             display: 'flex',
                                             justifyContent: 'center',
+                                            alignItems: 'center',
                                             background: '#f3f4f6',
                                             padding: '1rem',
                                             borderRadius: '8px',
-                                            overflow: 'auto'
+                                            overflow: 'auto',
+                                            minHeight: `${embedHeight}px`
                                         }}>
-                                            <iframe
-                                                src={id && id !== 'new' ? (id === 'demo' ? '/demo' : `/tour/${id}?embed=true`) : 'about:blank'}
-                                                style={{
-                                                    width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
-                                                    height: `${embedHeight}px`,
-                                                    border: '1px solid #e5e7eb',
-                                                    backgroundColor: 'white',
-                                                    maxWidth: '100%'
-                                                }}
-                                                title="Tour Preview"
-                                            />
+                                            {id && id !== 'new' ? (
+                                                <div
+                                                    className="portfolio-hero__preview"
+                                                    style={{
+                                                        position: 'relative',
+                                                        width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
+                                                        height: `${embedHeight}px`,
+                                                        maxWidth: '100%',
+                                                        borderRadius: '16px',
+                                                        overflow: 'hidden',
+                                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                                        backgroundColor: '#f3f4f6'
+                                                    }}
+                                                >
+                                                    <div
+                                                        ref={previewContainerRef}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            position: 'relative'
+                                                        }}
+                                                    >
+                                                        <iframe
+                                                            src={id === 'demo' ? '/demo?embed=true' : `/tour/${id}?embed=true`}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                border: 'none',
+                                                                backgroundColor: 'white'
+                                                            }}
+                                                            title="Tour Preview"
+                                                        />
+                                                    </div>
+
+                                                    {/* Portfolio Hero Style Overlay */}
+                                                    <div className="embed-preview__overlay"></div>
+
+
+                                                </div>
+                                            ) : (
+                                                <div style={{
+                                                    color: '#9ca3af',
+                                                    textAlign: 'center',
+                                                    padding: '2rem'
+                                                }}>
+                                                    <span className="material-icons" style={{ fontSize: '48px', marginBottom: '1rem', display: 'block' }}>preview</span>
+                                                    Simpan project terlebih dahulu untuk melihat preview
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

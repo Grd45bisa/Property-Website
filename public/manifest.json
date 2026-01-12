@@ -1,0 +1,33 @@
+{
+    "name": "Ruang360 - Virtual Tour 360°",
+    "short_name": "Ruang360",
+    "description": "Jasa Virtual Tour 360° Profesional Indonesia - Jual Properti 5x Lebih Cepat",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#363e45",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "id",
+    "icons": [
+        {
+            "src": "/Logo/Logo_Ruang360.webp",
+            "sizes": "192x192",
+            "type": "image/webp",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/Logo/Logo_Ruang360.webp",
+            "sizes": "512x512",
+            "type": "image/webp",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "business",
+        "lifestyle",
+        "real estate"
+    ],
+    "screenshots": [],
+    "prefer_related_applications": false
+}

@@ -12,8 +12,10 @@ interface Tour {
     rooms: number; // Count from relation
     created_at: string;
     thumbnail_url: string;
-    views?: number; // Optional, add to schema if essential
+    views?: number; // Optional
     isDemo?: boolean;
+    location?: string;
+    category?: string;
 }
 
 const DashboardPage: React.FC = () => {
@@ -61,7 +63,9 @@ const DashboardPage: React.FC = () => {
                     created_at: item.created_at,
                     thumbnail_url: item.thumbnail_url || 'https://via.placeholder.com/400x300?text=No+Image',
                     views: 0,
-                    isDemo: false
+                    isDemo: false,
+                    location: item.location,
+                    category: item.category
                 }));
                 setTours(formattedTours);
             }
@@ -237,7 +241,7 @@ const DashboardPage: React.FC = () => {
                     {/* Header */}
                     <div className="dashboard__header">
                         <div className="dashboard__header-content">
-                            <h1 className="dashboard__title">Dashboard Virtual Tour</h1>
+                            <h1 className="dashboard__title">Ruang360 Dashboard</h1>
                             <p className="dashboard__subtitle">Kelola semua project virtual tour Anda</p>
                         </div>
                         <button onClick={createNewTour} className="dashboard__btn-primary">
@@ -299,6 +303,22 @@ const DashboardPage: React.FC = () => {
                                     <div key={tour.id} className="dashboard__project-card">
                                         <div className="dashboard__card-thumbnail">
                                             <img src={tour.thumbnail_url} alt={tour.title} />
+
+                                            {/* Badges Overlay */}
+                                            <div className="dashboard__card-badges">
+                                                {tour.location && (
+                                                    <div className="dashboard__card-badge">
+                                                        <span className="material-icons dashboard__card-badge-icon">place</span>
+                                                        {tour.location}
+                                                    </div>
+                                                )}
+                                                {tour.category && (
+                                                    <div className="dashboard__card-badge dashboard__card-badge--category">
+                                                        {tour.category}
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <div className="dashboard__card-overlay">
                                                 <Link
                                                     to={`/editor/${tour.id}`}
@@ -311,14 +331,16 @@ const DashboardPage: React.FC = () => {
                                         </div>
                                         <div className="dashboard__card-content">
                                             <h3 className="dashboard__card-title">{tour.title}</h3>
-                                            <p className="dashboard__card-location">
-                                                {new Date(tour.created_at).toLocaleDateString()}
-                                            </p>
                                             <div className="dashboard__card-meta">
-                                                <span className="dashboard__card-rooms">
-                                                    <span className="material-icons">meeting_room</span>
+                                                <div className="dashboard__card-meta-item">
+                                                    <span className="material-icons dashboard__card-meta-icon">calendar_today</span>
+                                                    {new Date(tour.created_at).toLocaleDateString()}
+                                                </div>
+                                                {/* Rooms Count kept as useful meta, Views removed */}
+                                                <div className="dashboard__card-meta-item">
+                                                    <span className="material-icons dashboard__card-meta-icon">meeting_room</span>
                                                     {tour.rooms} Rooms
-                                                </span>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="dashboard__card-actions">
