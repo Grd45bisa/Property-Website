@@ -31,6 +31,7 @@ interface Hotspot {
     scale?: number; // 0.5 to 2.0, default 1
     opacity?: number; // 0 to 1, default 1
     renderMode?: '2d' | 'floor' | 'wall';
+    infoType?: 'modal' | 'tooltip'; // Interaction type for info hotspots
 }
 
 // Icon config
@@ -316,7 +317,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         description: '',
                         scale: h.scale,
                         opacity: h.opacity,
-                        renderMode: h.render_mode as '2d' | 'floor' | 'wall'
+                        renderMode: h.render_mode as '2d' | 'floor' | 'wall',
+                        infoType: h.info_type || 'modal'
                     }))
             }));
 
@@ -341,8 +343,11 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             id: hs.id,
             pitch: hs.pitch,
             yaw: hs.yaw,
+            // Add scale/opacity here so JSON.stringify detects changes in useEffect
+            scale: hs.scale,
+            opacity: hs.opacity,
             type: 'custom',
-            cssClass: `editor-hotspot editor-hotspot--${hs.icon} ${!isPreviewMode && selectedHotspotId === hs.id ? 'editor-hotspot--selected' : ''} ${hs.renderMode === 'floor' ? 'editor-hotspot--floor' : hs.renderMode === 'wall' ? 'editor-hotspot--wall' : ''}`,
+            cssClass: `custom-hotspot ${isNavHotspot ? 'custom-hotspot--scene' : 'custom-hotspot--info'} ${!isPreviewMode && selectedHotspotId === hs.id ? 'editor-hotspot--selected' : ''}`,
             clickHandlerFunc: () => {
                 if (isPreviewMode) {
                     if (isNavHotspot && hs.targetSceneId) {
@@ -358,15 +363,32 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 hotSpotDiv.style.setProperty('--hs-scale', String(hs.scale || 1));
                 hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity !== undefined ? hs.opacity : 1));
 
-                const icon = document.createElement('span');
-                icon.className = 'material-icons';
-                icon.textContent = iconConfig.materialIcon;
-                hotSpotDiv.appendChild(icon);
+                // Icon
+                // Icon
+                if (hs.icon === 'arrow') {
+                    // Custom SVG for Arrow
+                    hotSpotDiv.innerHTML = `
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: white;">
+                            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                        </svg>
+                    `;
+                } else {
+                    // Standard Material Icons for others
+                    const icon = document.createElement('span');
+                    icon.className = 'material-icons';
+                    icon.textContent = iconConfig.materialIcon;
+                    icon.style.color = 'white'; // Force white icon
+                    icon.style.fontSize = '24px';
+                    hotSpotDiv.appendChild(icon);
+                }
 
-                const tooltip = document.createElement('div');
-                tooltip.className = 'editor-hotspot__tooltip';
-                tooltip.textContent = hs.text;
-                hotSpotDiv.appendChild(tooltip);
+                // Tooltip
+                if (hs.text) {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'hotspot-tooltip';
+                    tooltip.textContent = hs.text;
+                    hotSpotDiv.appendChild(tooltip);
+                }
             }
         };
     };
@@ -429,6 +451,23 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             }
         };
     }, [activeSceneId, activeScene?.imageUrl]);
+
+    // Ensure viewer resizes correctly when window size changes or panels toggle
+    useEffect(() => {
+        const handleResize = () => {
+            if (pannellumInstance.current) {
+                pannellumInstance.current.resize();
+            }
+        };
+        window.addEventListener('resize', handleResize);
+
+        // Also force resize when Add Mode activates (just in case)
+        if (isAddMode && pannellumInstance.current) {
+            setTimeout(() => pannellumInstance.current.resize(), 100);
+        }
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isAddMode]);
 
     // 3. Sync Hotspots & Mode
     useEffect(() => {
@@ -766,7 +805,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         target_room_id: h.targetSceneId || null,
                         scale: h.scale || 1.0,
                         opacity: h.opacity !== undefined ? h.opacity : 1.0,
-                        render_mode: h.renderMode || '2d'
+                        render_mode: h.renderMode || '2d',
+                        info_type: h.infoType || 'modal'
                     });
                 });
             });
@@ -1134,13 +1174,14 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 </div>
             )}
 
-            {/* 1. Base Viewer Layer */}
+            {/* 1. 360 Viewer Container */}
             <div
+                id="pannellum-viewer"
                 ref={viewerRef}
                 className={`vt-editor__viewer ${isAddMode ? 'vt-editor__viewer--add-mode' : ''}`}
             />
 
-            {/* 2. Top Bar (Not Visible in Preview) or Exit Button (Visible in Preview) */}
+            {/* 2. Top Bar */}
             {!isPreviewMode ? (
                 <div className="vt-editor__top-bar">
                     <div className="vt-editor__title">
@@ -1459,6 +1500,35 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                 onChange={(e) => updateHotspot(selectedHotspot.id, { text: e.target.value })}
                             />
                         </div>
+
+                        <div className="vt-editor__form-group">
+                            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Size (Scale)</span>
+                                <span style={{ color: '#9ca3af' }}>{selectedHotspot.scale || 1}x</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="2.0"
+                                step="0.1"
+                                value={selectedHotspot.scale || 1}
+                                onChange={(e) => updateHotspot(selectedHotspot.id, { scale: parseFloat(e.target.value) })}
+                            />
+                        </div>
+
+                        {/* Info Type Selection for Info Hotspots */}
+                        {selectedHotspot.icon === 'info' && (
+                            <div className="vt-editor__form-group">
+                                <label>Interaction Type</label>
+                                <select
+                                    value={selectedHotspot.infoType || 'modal'}
+                                    onChange={(e) => updateHotspot(selectedHotspot.id, { infoType: e.target.value as 'modal' | 'tooltip' })}
+                                >
+                                    <option value="modal">Popup Box (Modal)</option>
+                                    <option value="tooltip">Label Only (Tooltip)</option>
+                                </select>
+                            </div>
+                        )}
 
                         {isNavigationIcon(selectedHotspot.icon) && (
                             <div className="vt-editor__form-group">

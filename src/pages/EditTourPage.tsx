@@ -96,7 +96,7 @@ const EditTourPage: React.FC = () => {
                     price: data.price || '',
                     agentName: data.agent_name || '',
                     agentWhatsapp: data.agent_whatsapp || '',
-                    coverImage: data.thumbnail_url || 'https://via.placeholder.com/800x600?text=No+Cover+Image',
+                    coverImage: data.thumbnail_url || 'https://placehold.co/800x600?text=No+Cover+Image',
                     clientName: data.client_name || '',
                     clientLogo: data.client_logo || '',
 
@@ -170,7 +170,7 @@ const EditTourPage: React.FC = () => {
         <div className="page-wrapper">
             <Navbar />
 
-            <main className="editor-layout">
+            <div className="editor-layout">
                 {/* Sidebar Navigation */}
                 <aside className="editor-sidebar">
                     <div className="editor-sidebar__header">
@@ -182,7 +182,7 @@ const EditTourPage: React.FC = () => {
 
                     {/* Project Info */}
                     <div className="editor-sidebar__project">
-                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Image'} alt={formData.title} className="editor-sidebar__thumb" />
+                        <img src={formData.coverImage || 'https://placehold.co/400x300?text=No+Image'} alt={formData.title} className="editor-sidebar__thumb" />
                         <div className="editor-sidebar__project-info">
                             <h3 className="editor-sidebar__project-title">{formData.title}</h3>
                             <span className="editor-sidebar__project-status">Published</span>
@@ -207,8 +207,21 @@ const EditTourPage: React.FC = () => {
                     </nav>
                 </aside>
 
-                {/* Main Content */}
-                <div className={`editor-content ${activeTab === '360' ? 'editor-content--full' : ''}`}>
+                {/* Content Area */}
+                <main className="editor-content">
+                    {/* 360 Editor Tab */}
+                    {activeTab === '360' && (
+                        <div className="editor-canvas-card">
+                            <VirtualTourEditor
+                                tourId={id!}
+                            // isPreviewMode={isPreviewMode} // Assuming these props are new and need to be defined elsewhere
+                            // setIsPreviewMode={setIsPreviewMode}
+                            // isMaximized={isMaximized}
+                            // setIsMaximized={setIsMaximized}
+                            />
+                        </div>
+                    )}
+
                     {activeTab !== '360' && (
                         <header className="editor-header">
                             <h1 className="editor-title">
@@ -232,12 +245,7 @@ const EditTourPage: React.FC = () => {
                         </header>
                     )}
 
-                    {/* 360 Editor Tab */}
-                    {activeTab === '360' && (
-                        <div className="editor-form editor-form--360">
-                            <VirtualTourEditor tourId={id} />
-                        </div>
-                    )}
+
 
                     {/* Info Tab */}
                     {activeTab === 'info' && (
@@ -357,7 +365,7 @@ const EditTourPage: React.FC = () => {
                                 <div className="form-group">
                                     <label className="form-label">Cover Image (Thumbnail)</label>
                                     <div className="image-upload-preview">
-                                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
+                                        <img src={formData.coverImage || 'https://placehold.co/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
                                         <button type="button" className="btn-upload">
                                             <span className="material-icons">cloud_upload</span>
                                             Ganti Gambar
@@ -617,8 +625,8 @@ const EditTourPage: React.FC = () => {
                             <p>Konfigurasi lanjutan untuk tour Anda.</p>
                         </div>
                     )}
-                </div>
-            </main>
+                </main>
+            </div>
         </div>
     );
 };

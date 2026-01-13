@@ -34,9 +34,9 @@
     width: 100%;
     height: 100%;
     z-index: 1;
-    /* Performance: GPU acceleration for smooth pan/drag */
-    will-change: transform;
-    transform: translateZ(0);
+    /* Performance: GPU acceleration removed to avoid coordinate mapping issues */
+    /* will-change: transform; */
+    /* transform: translateZ(0); */
     backface-visibility: hidden;
     /* Isolate for better compositing */
     contain: strict;
@@ -44,6 +44,16 @@
 
 .vt-editor__viewer--add-mode {
     cursor: crosshair;
+}
+
+/* 
+   In Add Mode, disable interaction with existing hotspots 
+   so clicks pass through to the viewer background for placement.
+*/
+.vt-editor__viewer--add-mode .pnlm-hotspot,
+.vt-editor__viewer--add-mode .custom-hotspot,
+.vt-editor__viewer--add-mode .pnlm-hotspot-base {
+    pointer-events: none !important;
 }
 
 /* ----------------------------------------
@@ -712,4 +722,116 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ========================================
+   Unified Hotspot Styles (Shared with Demo/Tour Page)
+   ======================================== */
+.custom-hotspot {
+    --base-size: 44px;
+    width: calc(var(--base-size) * var(--hs-scale, 1));
+    height: calc(var(--base-size) * var(--hs-scale, 1));
+    margin-left: calc(var(--base-size) * var(--hs-scale, 1) / -2) !important;
+    margin-top: calc(var(--base-size) * var(--hs-scale, 1) / -2) !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: width 0.15s, height 0.15s, margin 0.15s;
+}
+
+/* Icon scaling */
+.custom-hotspot .material-icons {
+    font-size: calc(24px * var(--hs-scale, 1)) !important;
+    transition: font-size 0.15s;
+}
+
+.custom-hotspot svg {
+    /* SVG will fill the container, so it scales automatically with width/height */
+    width: 100%;
+    height: 100%;
+}
+
+.custom-hotspot:hover {
+    z-index: 100 !important;
+    /* Optional: Slight grow on hover - applied to width/height or transform? 
+       Using transform for hover is safe because it adds to the computed style? 
+       NO, if I use transform here it might still conflict if Pannellum updates.
+       But :hover usually works okay if it's just visual.
+       However, let's just grow the inner wrapper or ignore hover scale for a sec to ensure basic sizing works.
+       Actually, standard hover effect uses transform. 
+       If I use transform scale on hover, it WILL break positioning momentarily.
+       Better to just use brightness or colors for hover, OR scale inner elements on hover.
+    */
+}
+
+/* Scale inner svg/icon on hover for "pop" effect without breaking container position */
+.custom-hotspot:hover .material-icons {
+    transform: scale(1.15);
+}
+
+.custom-hotspot:hover svg {
+    transform: scale(1.15);
+}
+
+.custom-hotspot--info {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.custom-hotspot--scene {
+    background: rgba(255, 255, 255, 0.2);
+    /* Glassy white for nav */
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    animation: pulse-scene 2s infinite;
+}
+
+@keyframes pulse-scene {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+}
+
+.hotspot-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    margin-bottom: 10px;
+    z-index: 10;
+}
+
+.custom-hotspot:hover .hotspot-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Editor Specific Overrides */
+.editor-hotspot--selected {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4);
 }

@@ -26,6 +26,8 @@ interface HotSpot {
     text: string;
     targetRoomId?: string;
     icon?: 'arrow' | 'door' | 'info';
+    infoType?: 'modal' | 'tooltip';
+    scale?: number;
 }
 
 const TourPage: React.FC = () => {
@@ -127,7 +129,9 @@ const TourPage: React.FC = () => {
                             type: h.target_room_id ? 'scene' : 'info',
                             text: h.text || '',
                             targetRoomId: h.target_room_id,
-                            icon: (h.icon as any) || (h.target_room_id ? 'arrow' : 'info')
+                            icon: (h.icon as any) || (h.target_room_id ? 'arrow' : 'info'),
+                            infoType: h.info_type || 'modal',
+                            scale: h.scale
                         }))
                 }));
 
@@ -182,25 +186,37 @@ const TourPage: React.FC = () => {
                 pitch: hs.pitch,
                 yaw: hs.yaw,
                 type: 'custom',
-                cssClass: hs.type === 'scene' ? 'custom-hotspot custom-hotspot--scene' : 'custom-hotspot custom-hotspot--info',
+                cssClass: `custom-hotspot ${hs.type === 'scene' ? 'custom-hotspot--scene' : 'custom-hotspot--info'}`,
                 createTooltipFunc: (hotSpotDiv: HTMLElement) => {
-                    const icon = document.createElement('span');
-                    icon.className = 'material-icons hotspot-icon';
+
+
+                    // Apply scale if present
+                    if (hs.scale) {
+                        hotSpotDiv.style.setProperty('--hs-scale', String(hs.scale));
+                    }
 
                     // Icon mapping
                     let iconType = hs.icon || (hs.type === 'scene' ? 'arrow' : 'info');
-                    if (hs.type === 'scene' && !hs.icon) iconType = 'arrow'; // Fallback
+                    if (hs.type === 'scene' && !hs.icon) iconType = 'arrow';
 
-                    switch (iconType) {
-                        case 'door': icon.textContent = 'meeting_room'; break;
-                        case 'arrow': icon.textContent = 'north'; break;
-                        case 'info': default: icon.textContent = 'info'; break;
+                    // Icon rendering
+                    if (iconType === 'arrow') {
+                        hotSpotDiv.innerHTML = `
+                            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: white; width: 100%; height: 100%;">
+                                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                            </svg>
+                        `;
+                    } else {
+                        const icon = document.createElement('span');
+                        icon.className = 'material-icons';
+                        switch (iconType) {
+                            case 'door': icon.textContent = 'meeting_room'; break;
+                            case 'info': default: icon.textContent = 'info'; break;
+                        }
+                        icon.style.color = 'white';
+                        icon.style.fontSize = '24px';
+                        hotSpotDiv.appendChild(icon);
                     }
-
-
-                    // All icons white for clean look - handled by CSS class .hotspot-icon
-                    icon.style.fontSize = hs.type === 'scene' ? '24px' : '22px';
-                    hotSpotDiv.appendChild(icon);
 
                     const tooltip = document.createElement('div');
                     tooltip.className = 'hotspot-tooltip';
@@ -222,9 +238,12 @@ const TourPage: React.FC = () => {
                             setActiveInfoCard(null);
                         }, 400);
                     } else if (hs.type === 'info') {
-                        setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        // Only show popup if type is 'modal' (default) or undefined
+                        if (!hs.infoType || hs.infoType === 'modal') {
+                            setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        }
                     }
-                },
+                }
             }));
 
             // Add Nadir/Tripod Cap
@@ -745,12 +764,25 @@ const TourPage: React.FC = () => {
                 .pnlm-hotspot-base, .pnlm-pointer, .pnlm-hotspot { transition: none !important; }
                 
                 .custom-hotspot {
-                    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    --base-size: 44px;
+                    width: calc(var(--base-size) * var(--hs-scale, 1));
+                    height: calc(var(--base-size) * var(--hs-scale, 1));
+                    margin-left: calc(var(--base-size) * var(--hs-scale, 1) / -2) !important;
+                    margin-top: calc(var(--base-size) * var(--hs-scale, 1) / -2) !important;
+                    display: flex; align-items: center; justify-content: center;
+                    cursor: pointer;
+                    transition: width 0.3s, height 0.3s, margin 0.3s;
                 }
-                .custom-hotspot:hover { 
+                .custom-hotspot .material-icons {
+                    font-size: calc(24px * var(--hs-scale, 1)) !important;
+                    transition: font-size 0.3s;
+                }
+                .custom-hotspot svg { width: 100%; height: 100%; }
+
+                .custom-hotspot:hover .material-icons, .custom-hotspot:hover svg { 
                     transform: scale(1.25); 
-                    box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+                }
+                .custom-hotspot:hover {
                     z-index: 100 !important;
                 }
                 .custom-hotspot--info {
@@ -764,20 +796,22 @@ const TourPage: React.FC = () => {
                     border-color: #ffffff;
                 }
                 .custom-hotspot--scene {
-                    background: rgba(34, 197, 94, 0.7); 
-                    border-radius: 50%; 
-                    border: 2px solid #ffffff;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 50%;
+                    border: 2px solid rgba(255, 255, 255, 0.8);
+                    backdrop-filter: blur(4px);
                     animation: pulse-scene 2s infinite;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 }
                 .custom-hotspot--scene:hover {
-                    background: rgba(34, 197, 94, 0.9);
-                    animation: none; /* Stop pulse on hover for stability */
+                    background: rgba(255, 255, 255, 0.4);
+                    border-color: #ffffff;
+                    animation: none;
                 }
                 @keyframes pulse-scene {
-                    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-                    70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+                    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                    50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
                 }
                 .hotspot-tooltip {
                     position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(5px);
