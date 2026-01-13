@@ -201,6 +201,7 @@ const TourPage: React.FC = () => {
                 pitch: hs.pitch,
                 yaw: hs.yaw,
                 type: 'custom',
+                scale: hs.icon === 'blur', // Enable zoom scaling for blur so it sticks to objects
                 // Determine CSS class based on type and render mode
                 cssClass: (() => {
                     const baseClass = 'custom-hotspot';
@@ -286,12 +287,16 @@ const TourPage: React.FC = () => {
                     }
                     wrapper.appendChild(icon);
 
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'hotspot-tooltip';
-                    tooltip.textContent = hs.text;
-                    hotSpotDiv.appendChild(tooltip);
+                    if (hs.icon !== 'blur') {
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'hotspot-tooltip';
+                        tooltip.textContent = hs.text;
+                        hotSpotDiv.appendChild(tooltip);
+                    }
                 },
                 clickHandlerFunc: () => {
+                    if (hs.icon === 'blur') return; // Disable click for blur
+
                     if (hs.type === 'scene' && hs.targetRoomId) {
                         // Save current viewing direction before transitioning
                         if (pannellumInstance.current) {

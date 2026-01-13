@@ -113,6 +113,7 @@ const DemoTourPage: React.FC = () => {
                 pitch: hs.pitch,
                 yaw: hs.yaw,
                 type: 'custom',
+                scale: hs.icon === 'blur',
                 cssClass: (() => {
                     const baseClass = 'custom-hotspot';
                     // typeClass logic synced with Editor
@@ -196,12 +197,16 @@ const DemoTourPage: React.FC = () => {
                     }
                     wrapper.appendChild(icon);
 
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'hotspot-tooltip';
-                    tooltip.textContent = hs.text;
-                    hotSpotDiv.appendChild(tooltip);
+                    if (hs.icon !== 'blur') {
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'hotspot-tooltip';
+                        tooltip.textContent = hs.text;
+                        hotSpotDiv.appendChild(tooltip);
+                    }
                 },
                 clickHandlerFunc: () => {
+                    if (hs.icon === 'blur') return;
+
                     if (hs.type === 'scene' && hs.targetRoomId) {
                         // Start transition effect: zoom in/fade out
                         setIsTransitioning(true);

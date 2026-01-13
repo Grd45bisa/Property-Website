@@ -773,6 +773,7 @@
 
 .vt-editor__range::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 16px;
     height: 16px;
     background: #10b981;
