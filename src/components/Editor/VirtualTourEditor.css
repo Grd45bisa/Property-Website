@@ -165,13 +165,26 @@
     overflow-x: auto;
     padding: 20px;
     max-width: 90%;
-    scrollbar-width: none;
-    /* Firefox */
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
 .vt-editor__filmstrip::-webkit-scrollbar {
-    display: none;
-    /* Chrome/Safari */
+    height: 6px;
+}
+
+.vt-editor__filmstrip::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.vt-editor__filmstrip::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.vt-editor__filmstrip::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 .vt-editor__scene-card {
@@ -712,4 +725,71 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ----------------------------------------
+   8. Premium Panel Styling (New)
+   ---------------------------------------- */
+.vt-editor__section {
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vt-editor__section-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vt-editor__section-header .material-icons {
+    font-size: 14px;
+    color: #10b981;
+}
+
+.vt-editor__range-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.vt-editor__range {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+.vt-editor__range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s;
+}
+
+.vt-editor__range::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.vt-editor__range-value {
+    width: 32px;
+    font-size: 11px;
+    color: white;
+    text-align: right;
+    font-family: monospace;
 }

@@ -35,8 +35,17 @@ export default defineConfig(({ mode }): UserConfig => {
     ].filter(Boolean),
 
     server: {
+      hmr: {
+        // If WebSocket fails, try disabling HMR overlay
+        overlay: false,
+      },
       host: true,
       allowedHosts: true,
+      // Watch files for changes (fallback if HMR fails)
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      },
     },
 
     preview: {

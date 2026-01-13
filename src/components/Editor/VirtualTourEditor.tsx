@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import './VirtualTourEditor.css';
+import '../../styles/Hotspots.css';
 
 declare global {
     interface Window {
@@ -17,7 +18,7 @@ interface Scene {
     sequence_order?: number;
 }
 
-type HotspotIcon = 'info' | 'door' | 'arrow';
+type HotspotIcon = 'info' | 'door' | 'arrow' | 'nav_arrow' | 'blur';
 
 interface Hotspot {
     id: string;
@@ -31,13 +32,32 @@ interface Hotspot {
     scale?: number; // 0.5 to 2.0, default 1
     opacity?: number; // 0 to 1, default 1
     renderMode?: '2d' | 'floor' | 'wall';
+    rotateX?: number; // Tilt for floor mode (0-90)
+    rotateZ?: number; // Tilt for wall mode (Left/Right)
+    rotateY?: number; // Wall slant (Yaw)
+    aspectRatio?: number;
+    scaleY?: number;
+    blurShape?: 'circle' | 'rect';
+    interactionMode?: 'popup' | 'label'; // For Info hotspots: 'popup' (default) or 'label' (visible only)
 }
 
 // Icon config
-const HOTSPOT_ICONS: { id: HotspotIcon; label: string; materialIcon: string; color: string }[] = [
+const HOTSPOT_ICONS: { id: HotspotIcon; label: string; materialIcon?: string; customIcon?: React.ReactNode; color: string }[] = [
     { id: 'info', label: 'Info', materialIcon: 'info', color: '#3b82f6' },
     { id: 'door', label: 'Pintu', materialIcon: 'meeting_room', color: '#10b981' },
-    { id: 'arrow', label: 'Arrow', materialIcon: 'arrow_upward', color: '#10b981' },
+    {
+        id: 'arrow',
+        label: 'Floor',
+        // materialIcon: 'arrow_upward', // Replaced with custom SVG
+        customIcon: (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            </svg>
+        ),
+        color: '#10b981'
+    },
+    { id: 'nav_arrow', label: 'Arrow', materialIcon: 'arrow_upward', color: '#10b981' },
+    { id: 'blur', label: 'Blur', materialIcon: 'blur_on', color: '#6366f1' },
 ];
 
 interface VirtualTourEditorProps {
@@ -47,8 +67,7 @@ interface VirtualTourEditorProps {
 const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     // Constants
     const MAX_FILE_SIZE = 50 * 1024 * 1024; // Allow up to 50MB input (will be compressed)
-    const TARGET_FILE_SIZE = 10 * 1024 * 1024; // Target output size < 10MB
-    const MAX_DIMENSION = 8192; // High quality for 360 images
+
 
     const viewerRef = useRef<HTMLDivElement>(null);
     const pannellumInstance = useRef<any>(null);
@@ -113,15 +132,35 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
 
     // --- HELPER FUNCTIONS & HANDLERS ---
 
+    /**
+     * Detects the surface mode (floor or wall) based on the pitch angle.
+     * - Pitch < -35 degrees means looking down -> floor
+     * - Pitch >= -35 degrees means looking straight/up -> wall
+     */
+    const detectSurfaceMode = (pitch: number): 'floor' | 'wall' | '2d' => {
+        if (pitch < -35) {
+            return 'floor';
+        }
+        return '2d'; // Default to 2D (billboard) as requested
+    };
+
     const addNewHotspot = (pitch: number, yaw: number, icon: HotspotIcon) => {
         const isNavigation = icon === 'door' || icon === 'arrow';
+
+        // Auto-detect surface mode based on pitch
+        const detectedMode = detectSurfaceMode(pitch);
+
         const newHotspot: Hotspot = {
             id: crypto.randomUUID(), // Use standard UUID for Supabase compatibility
             icon,
             pitch,
             yaw,
             text: isNavigation ? 'Ke Ruangan...' : 'Info Point',
-            targetSceneId: isNavigation ? scenes.find(s => s.id !== activeSceneId)?.id : undefined
+            targetSceneId: isNavigation ? scenes.find(s => s.id !== activeSceneId)?.id : undefined,
+            renderMode: detectedMode, // Apply detected mode
+            rotateX: detectedMode === 'floor' ? 75 : 0, // Default tilt for floor
+            rotateZ: 0, // Default wall tilt
+            rotateY: 0 // Default wall slant
         };
 
         setScenes(prev => prev.map(s => {
@@ -133,7 +172,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
 
         setIsAddMode(false);
         setSelectedHotspotId(newHotspot.id);
-        showToast(`Hotspot ${getIconConfig(icon).label} ditambahkan!`);
+        showToast(`Hotspot ${getIconConfig(icon).label} ditambahkan (${detectedMode})!`);
     };
 
     // Stable reference for the click handler to avoid re-binding listeners
@@ -152,63 +191,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         onViewerClickRef.current(event);
     }, []);
 
-    // Helper: Compress Image
-    const compressImage = async (file: File): Promise<File> => {
-        // If file is small enough (< 5MB), return as is (unless format conversion needed?)
-        // Actually, user wants "detected up to 30", implying large files.
-        // Let's optimize anything > 5MB to be safe, or if > 10MB definitely optimize.
-        // And even if small, ensuring max 8192px is good for consistency.
-        if (file.size < 5 * 1024 * 1024) return file;
 
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            img.onload = () => {
-                URL.revokeObjectURL(img.src);
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-
-                // Resize if too huge
-                if (width > MAX_DIMENSION) {
-                    const scale = MAX_DIMENSION / width;
-                    width = MAX_DIMENSION;
-                    height = img.height * scale;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    reject(new Error('Canvas context failed'));
-                    return;
-                }
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // High quality compression first
-                canvas.toBlob((blob) => {
-                    if (!blob) {
-                        reject(new Error('Compression failed'));
-                        return;
-                    }
-
-                    // If still too big, try lower quality
-                    if (blob.size > TARGET_FILE_SIZE) {
-                        canvas.toBlob((blob2) => {
-                            if (blob2) {
-                                resolve(new File([blob2], file.name, { type: 'image/jpeg' }));
-                            } else {
-                                resolve(file); // Fallback to original if blob2 fails
-                            }
-                        }, 'image/jpeg', 0.75); // Retry with lower quality
-                    } else {
-                        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                    }
-                }, 'image/jpeg', 0.85); // Initial high quality
-            };
-            img.onerror = (e) => reject(e);
-        });
-    };
 
     // Helper: Generate tiny thumbnail for blur placeholder
     const generateThumbnail = async (file: File): Promise<Blob> => {
@@ -316,7 +299,14 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         description: '',
                         scale: h.scale,
                         opacity: h.opacity,
-                        renderMode: h.render_mode as '2d' | 'floor' | 'wall'
+                        renderMode: h.render_mode as '2d' | 'floor' | 'wall',
+                        rotateX: h.rotate_x,
+                        rotateZ: h.rotate_z,
+                        rotateY: h.rotate_y,
+                        aspectRatio: h.aspect_ratio,
+                        scaleY: h.scale_y,
+                        blurShape: h.blur_shape as 'circle' | 'rect',
+                        interactionMode: h.interaction_mode as 'popup' | 'label'
                     }))
             }));
 
@@ -332,17 +322,44 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         }
     };
 
-    // 1. Helper to create hotspot config
     const createHotspotConfig = (hs: Hotspot) => {
         const iconConfig = getIconConfig(hs.icon);
-        const isNavHotspot = hs.icon === 'door' || hs.icon === 'arrow';
+        const isNavHotspot = hs.icon === 'door' || hs.icon === 'arrow' || hs.icon === 'nav_arrow';
+
+        // Map to shared classes from Hotspots.css
+        // isNavHotspot -> custom-hotspot--scene (pulsing green)
+        // info -> custom-hotspot--info (white/black)
+        // blur -> custom-hotspot--blur
+        let typeClass = isNavHotspot ? 'custom-hotspot--scene' : 'custom-hotspot--info';
+        if (hs.icon === 'blur') typeClass = 'custom-hotspot--blur';
+
+        // Additional state classes
+        const selectedClass = (!isPreviewMode && selectedHotspotId === hs.id) ? 'custom-hotspot--selected' : '';
+        const editableClass = !isPreviewMode ? 'custom-hotspot--editable' : '';
+
+        // Render mode class (floor/wall/2d)
+        let renderModeClass = '';
+        if (hs.renderMode === 'floor') renderModeClass = 'custom-hotspot--floor';
+        else if (hs.renderMode === '2d') renderModeClass = 'custom-hotspot--2d';
 
         return {
             id: hs.id,
             pitch: hs.pitch,
             yaw: hs.yaw,
             type: 'custom',
-            cssClass: `editor-hotspot editor-hotspot--${hs.icon} ${!isPreviewMode && selectedHotspotId === hs.id ? 'editor-hotspot--selected' : ''} ${hs.renderMode === 'floor' ? 'editor-hotspot--floor' : hs.renderMode === 'wall' ? 'editor-hotspot--wall' : ''}`,
+            scale: hs.icon === 'blur', // Enable zoom scaling for blur (so it stays attached to object), disable for icons (so they stay readable)
+            // Include scale and renderMode for change detection (JSON.stringify comparison)
+            _scale: hs.scale || 1,
+            _renderMode: hs.renderMode || '2d',
+            _rotateX: hs.rotateX,
+            _rotateZ: hs.rotateZ,
+            _rotateY: hs.rotateY,
+            _aspect: hs.aspectRatio,
+            _scaleY: hs.scaleY,
+            _blurShape: hs.blurShape,
+            _opacity: hs.opacity,
+            // Use the shared 'custom-hotspot' base class and the type modifier
+            cssClass: `custom-hotspot ${typeClass} ${selectedClass} ${renderModeClass} ${editableClass}`.trim(),
             clickHandlerFunc: () => {
                 if (isPreviewMode) {
                     if (isNavHotspot && hs.targetSceneId) {
@@ -354,17 +371,83 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 }
             },
             createTooltipFunc: (hotSpotDiv: HTMLElement) => {
-                // Apply visual settings via CSS variables
-                hotSpotDiv.style.setProperty('--hs-scale', String(hs.scale || 1));
-                hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity !== undefined ? hs.opacity : 1));
+                // Apply visual settings - always set scale (default to 1)
+                const scaleValue = hs.scale ?? 1;
+                hotSpotDiv.style.setProperty('--hs-scale', String(scaleValue));
+
+                if (hs.aspectRatio) {
+                    hotSpotDiv.style.setProperty('--hs-aspect-ratio', String(hs.aspectRatio));
+                }
+
+                if (hs.scaleY) {
+                    hotSpotDiv.style.setProperty('--hs-scale-y', String(hs.scaleY));
+                }
+
+                if (hs.icon === 'blur') {
+                    const radius = hs.blurShape === 'rect' ? '8px' : '50%';
+                    hotSpotDiv.style.setProperty('--hs-border-radius', radius);
+                }
+
+                if (hs.opacity !== undefined && hs.opacity !== null) {
+                    hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity));
+                } else {
+                    hotSpotDiv.style.setProperty('--hs-opacity', '1');
+                }
+
+                // Apply floor rotation via CSS variable (dynamic or default)
+                if (hs.renderMode === 'floor') {
+                    const tilt = hs.rotateX ?? 75;
+                    hotSpotDiv.style.setProperty('--hs-rotate-x', `${tilt}deg`);
+                }
+
+                // Apply wall rotation (Z) via CSS variable
+                if (hs.renderMode === 'wall') {
+                    const tiltZ = hs.rotateZ ?? 0;
+                    const tiltY = hs.rotateY ?? 0;
+                    hotSpotDiv.style.setProperty('--hs-rotate-z', `${tiltZ}deg`);
+                    hotSpotDiv.style.setProperty('--hs-rotate-y', `${tiltY}deg`);
+                }
+
+                // Create inner wrapper to handle transforms (avoids conflict with Pannellum positioning)
+                const wrapper = document.createElement('div');
+                wrapper.className = 'hotspot-inner';
+                hotSpotDiv.appendChild(wrapper);
 
                 const icon = document.createElement('span');
-                icon.className = 'material-icons';
-                icon.textContent = iconConfig.materialIcon;
-                hotSpotDiv.appendChild(icon);
+
+                if (hs.icon === 'arrow') {
+                    // Arrow/Floor: Custom Circle SVG
+                    icon.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="2"/></svg>`;
+                    icon.className = 'hotspot-icon';
+                    icon.style.display = 'flex';
+                    icon.style.alignItems = 'center';
+                    icon.style.justifyContent = 'center';
+                } else if (hs.icon === 'door' || hs.icon === 'nav_arrow') {
+                    // Door/Arrow: Material icon
+                    icon.className = 'material-icons hotspot-icon';
+                    icon.textContent = hs.icon === 'door' ? 'meeting_room' : 'arrow_upward';
+                    icon.style.color = '#ffffff';
+                    icon.style.fontSize = '24px';
+                } else if (hs.icon === 'blur') {
+                    // Blur: No icon, just wrapper handling effect
+                    // Optional: icon for editing only?
+                    if (!isPreviewMode) {
+                        icon.className = 'material-icons hotspot-icon';
+                        icon.textContent = 'blur_on';
+                        icon.style.color = 'rgba(255,255,255,0.5)';
+                        icon.style.fontSize = '24px';
+                    }
+                } else {
+                    icon.className = 'material-icons hotspot-icon';
+                    icon.textContent = iconConfig.materialIcon || 'info';
+                    icon.style.color = '#ffffff';
+                    icon.style.fontSize = '22px';
+                }
+
+                wrapper.appendChild(icon);
 
                 const tooltip = document.createElement('div');
-                tooltip.className = 'editor-hotspot__tooltip';
+                tooltip.className = 'hotspot-tooltip'; // Use shared class
                 tooltip.textContent = hs.text;
                 hotSpotDiv.appendChild(tooltip);
             }
@@ -397,8 +480,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 maxPitch: 90
             });
 
-            // Event listener for adding hotspots
-            pannellumInstance.current.on('mousedown', handleViewerClick);
+            // Event listener is handled in the Sync Effect below to avoid duplicates/race conditions
+            // pannellumInstance.current.on('mousedown', handleViewerClick);
 
             // Update refs
             renderedHotspotsRef.current = []; // Reset tracked hotspots
@@ -471,7 +554,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         try {
             viewer.off('mousedown', handleViewerClick);
         } catch (e) {
-            console.warn('Error removing mousedown listener', e);
+            // console.warn('Error removing mousedown listener'); // Harmless cleanup error in Pannellum
         }
 
         if (!isPreviewMode) {
@@ -526,16 +609,21 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         }
     };
 
+
+
     const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         const sceneId = e.target.dataset.sceneId;
 
         if (!file || !sceneId || !tourId) return;
 
+        // Skip "Demo Mode" check to allow local testing if needed
+        /*
         if (tourId === 'demo') {
             alert('Upload disabled in Demo Mode');
             return;
         }
+        */
 
         // Validate File Size (Input Limit)
         if (file.size > MAX_FILE_SIZE) {
@@ -545,21 +633,11 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         }
 
         setLoading(true);
-        showToast('Mengompresi gambar...');
+        showToast('Mengupload gambar (Original)...');
 
         try {
-            // Compress
-            const compressedFile = await compressImage(file);
-
-            // Re-check output size
-            if (compressedFile.size > TARGET_FILE_SIZE) {
-                // If still too big after compression attempts
-                showToast('Gagal kompresi < 10MB. File terlalu kompleks.');
-                setLoading(false);
-                return;
-            }
-
-            showToast('Mengupload gambar...');
+            // Per USER request: Do NOT compress the main 360 image. Use original file.
+            const uploadFile = file;
 
             // Get current scene's old URLs to delete after successful upload
             const currentScene = scenes.find(s => s.id === sceneId);
@@ -577,11 +655,11 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             };
 
             // Upload to Supabase Storage
-            const fileExt = compressedFile.name.split('.').pop() || 'jpg';
+            const fileExt = uploadFile.name.split('.').pop() || 'jpg';
             const fileName = `${tourId}/${sceneId}-${Date.now()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
                 .from('virtual-tours')
-                .upload(fileName, compressedFile);
+                .upload(fileName, uploadFile);
 
             if (uploadError) throw uploadError;
 
@@ -660,18 +738,19 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         }
 
         setLoading(true);
-        showToast('Mengompresi watermark...');
+        showToast('Mengupload watermark (Original)...');
 
         try {
             // Compress
-            const compressedFile = await compressImage(file);
+            // Per USER request: Do not compress
+            const uploadFile = file;
 
-            const fileExt = compressedFile.name.split('.').pop() || 'jpg';
+            const fileExt = uploadFile.name.split('.').pop() || 'jpg';
             const fileName = `nadir/${tourId}-${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('virtual-tours')
-                .upload(fileName, compressedFile);
+                .upload(fileName, uploadFile);
 
             if (uploadError) throw uploadError;
 
@@ -766,7 +845,14 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         target_room_id: h.targetSceneId || null,
                         scale: h.scale || 1.0,
                         opacity: h.opacity !== undefined ? h.opacity : 1.0,
-                        render_mode: h.renderMode || '2d'
+                        render_mode: h.renderMode || '2d',
+                        rotate_x: h.rotateX,
+                        rotate_z: h.rotateZ,
+                        rotate_y: h.rotateY,
+                        aspect_ratio: h.aspectRatio,
+                        scale_y: h.scaleY,
+                        blur_shape: h.blurShape,
+                        interaction_mode: h.interactionMode || 'popup'
                     });
                 });
             });
@@ -1236,8 +1322,13 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                 setSelectedHotspotId(null);
                             }}
                             data-tooltip={`Add ${iconConfig.label}`}
+                            style={{ color: isAddMode && addModeIcon === iconConfig.id ? iconConfig.color : 'inherit' }}
                         >
-                            <span className="material-icons">{iconConfig.materialIcon}</span>
+                            {iconConfig.customIcon ? (
+                                iconConfig.customIcon
+                            ) : (
+                                <span className="material-icons">{iconConfig.materialIcon}</span>
+                            )}
                         </button>
                     ))}
                     <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)' }} />
@@ -1451,121 +1542,395 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         </button>
                     </div>
                     <div className="vt-editor__panel-content">
-                        <div className="vt-editor__form-group">
-                            <label>Label</label>
-                            <input
-                                type="text"
-                                value={selectedHotspot.text}
-                                onChange={(e) => updateHotspot(selectedHotspot.id, { text: e.target.value })}
-                            />
+                        {/* SECTION: CONTENT */}
+                        <div className="vt-editor__section">
+                            <div className="vt-editor__section-header">
+                                <span className="material-icons">edit</span> Content
+                            </div>
+                            {selectedHotspot.icon !== 'blur' && (
+                                <div className="vt-editor__form-group">
+                                    <label>Label Text</label>
+                                    <input
+                                        type="text"
+                                        value={selectedHotspot.text}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, { text: e.target.value })}
+                                        placeholder="Enter hotspot label..."
+                                    />
+                                </div>
+                            )}
+
+                            {/* Interaction Mode (Info Only) */}
+                            {selectedHotspot.icon === 'info' && (
+                                <div className="vt-editor__form-group">
+                                    <label>Interaction Type</label>
+                                    <div style={{ display: 'flex', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                                            <input
+                                                type="radio"
+                                                name="interactionMode"
+                                                value="popup"
+                                                checked={!selectedHotspot.interactionMode || selectedHotspot.interactionMode === 'popup'}
+                                                onChange={() => updateHotspot(selectedHotspot.id, { interactionMode: 'popup' })}
+                                            />
+                                            Popup Card
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                                            <input
+                                                type="radio"
+                                                name="interactionMode"
+                                                value="label"
+                                                checked={selectedHotspot.interactionMode === 'label'}
+                                                onChange={() => updateHotspot(selectedHotspot.id, { interactionMode: 'label' })}
+                                            />
+                                            Label Only
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Target Scene (Nav Only) */}
+                            {isNavigationIcon(selectedHotspot.icon) && (
+                                <div className="vt-editor__form-group">
+                                    <label>Target Destination</label>
+                                    <select
+                                        value={selectedHotspot.targetSceneId || ''}
+                                        onChange={(e) => {
+                                            const newTargetId = e.target.value;
+                                            const targetScene = scenes.find(s => s.id === newTargetId);
+                                            updateHotspot(selectedHotspot.id, {
+                                                targetSceneId: newTargetId,
+                                                ...(targetScene ? { text: targetScene.name } : {})
+                                            });
+                                        }}
+                                    >
+                                        <option value="">Select scene...</option>
+                                        {scenes.filter(s => s.id !== activeSceneId).map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
 
-                        {isNavigationIcon(selectedHotspot.icon) && (
+                        {/* SECTION: APPEARANCE */}
+                        <div className="vt-editor__section">
+                            <div className="vt-editor__section-header">
+                                <span className="material-icons">palette</span> Appearance
+                            </div>
+
+                            {/* Scale Slider */}
                             <div className="vt-editor__form-group">
-                                <label>Target Scene</label>
+                                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Size / Scale</span>
+                                    <span style={{ color: '#10b981', fontFamily: 'monospace' }}>{(selectedHotspot.scale || 1).toFixed(1)}x</span>
+                                </label>
+                                <div className="vt-editor__range-wrapper">
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280' }}>photo_size_select_small</span>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        className="vt-editor__range"
+                                        value={selectedHotspot.scale || 1}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, {
+                                            scale: parseFloat(e.target.value)
+                                        })}
+                                    />
+                                    <span className="material-icons" style={{ fontSize: '18px', color: '#e5e7eb' }}>photo_size_select_large</span>
+                                </div>
+                            </div>
+
+                            {/* Aspect Ratio Slider (Stretch) */}
+                            <div className="vt-editor__form-group">
+                                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Stretch (Width)</span>
+                                    <span className="vt-editor__range-value">{(selectedHotspot.aspectRatio || 1).toFixed(1)}x</span>
+                                </label>
+                                <div className="vt-editor__range-wrapper">
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280' }}>compress</span>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="5"
+                                        step="0.1"
+                                        className="vt-editor__range"
+                                        value={selectedHotspot.aspectRatio || 1}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, {
+                                            aspectRatio: parseFloat(e.target.value)
+                                        })}
+                                    />
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#e5e7eb' }}>expand</span>
+                                </div>
+                            </div>
+
+                            {/* ScaleY (Stretch Height) */}
+                            <div className="vt-editor__form-group">
+                                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Stretch (Height)</span>
+                                    <span className="vt-editor__range-value">{(selectedHotspot.scaleY || 1).toFixed(1)}x</span>
+                                </label>
+                                <div className="vt-editor__range-wrapper">
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280', transform: 'rotate(90deg)' }}>compress</span>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="5"
+                                        step="0.1"
+                                        className="vt-editor__range"
+                                        value={selectedHotspot.scaleY || 1}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, {
+                                            scaleY: parseFloat(e.target.value)
+                                        })}
+                                    />
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#e5e7eb', transform: 'rotate(90deg)' }}>expand</span>
+                                </div>
+                            </div>
+
+                            {/* Shape Toggle (Blur Only) */}
+                            {selectedHotspot.icon === 'blur' && (
+                                <div className="vt-editor__form-group" style={{ marginTop: '8px' }}>
+                                    <label>Blur Shape</label>
+                                    <div style={{ display: 'flex', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                                            <input
+                                                type="radio"
+                                                name="blurShape"
+                                                value="circle"
+                                                checked={!selectedHotspot.blurShape || selectedHotspot.blurShape === 'circle'}
+                                                onChange={() => updateHotspot(selectedHotspot.id, { blurShape: 'circle' })}
+                                            />
+                                            Round
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                                            <input
+                                                type="radio"
+                                                name="blurShape"
+                                                value="rect"
+                                                checked={selectedHotspot.blurShape === 'rect'}
+                                                onChange={() => updateHotspot(selectedHotspot.id, { blurShape: 'rect' })}
+                                            />
+                                            Box
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Opacity Slider */}
+                            <div className="vt-editor__form-group">
+                                <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Opacity</span>
+                                    <span style={{ color: '#10b981', fontFamily: 'monospace' }}>{Math.round((selectedHotspot.opacity ?? 1) * 100)}%</span>
+                                </label>
+                                <div className="vt-editor__range-wrapper">
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280' }}>visibility_off</span>
+                                    <input
+                                        type="range"
+                                        min="0.1"
+                                        max="1"
+                                        step="0.1"
+                                        className="vt-editor__range"
+                                        value={selectedHotspot.opacity ?? 1}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, {
+                                            opacity: parseFloat(e.target.value)
+                                        })}
+                                    />
+                                    <span className="material-icons" style={{ fontSize: '14px', color: '#e5e7eb' }}>visibility</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECTION: POSITION */}
+                        <div className="vt-editor__section">
+                            <div className="vt-editor__section-header">
+                                <span className="material-icons">3d_rotation</span> Position & Transform
+                            </div>
+
+                            <div className="vt-editor__form-group">
+                                <label>Render Mode</label>
                                 <select
-                                    value={selectedHotspot.targetSceneId || ''}
-                                    onChange={(e) => {
-                                        const newTargetId = e.target.value;
-                                        const targetScene = scenes.find(s => s.id === newTargetId);
-                                        updateHotspot(selectedHotspot.id, {
-                                            targetSceneId: newTargetId,
-                                            // Auto-update text to match scene name if a scene is selected
-                                            ...(targetScene ? { text: targetScene.name } : {})
-                                        });
-                                    }}
+                                    value={selectedHotspot.renderMode || '2d'}
+                                    onChange={(e) => updateHotspot(selectedHotspot.id, {
+                                        renderMode: e.target.value as 'floor' | 'wall' | '2d'
+                                    })}
                                 >
-                                    <option value="">Select scene...</option>
-                                    {scenes.filter(s => s.id !== activeSceneId).map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
+                                    <option value="2d">2D (Always Face Camera)</option>
+                                    <option value="wall">3D Wall (Vertical Surface)</option>
+                                    <option value="floor">3D Floor (Horizontal Surface)</option>
                                 </select>
                             </div>
-                        )}
+
+                            {/* Dynamic Sliders based on Mode */}
+                            {selectedHotspot.renderMode === 'floor' && (
+                                <div className="vt-editor__form-group">
+                                    <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Tilt X (Floor Slant)</span>
+                                        <span className="vt-editor__range-value">{selectedHotspot.rotateX ?? 75}°</span>
+                                    </label>
+                                    <div className="vt-editor__range-wrapper">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="90"
+                                            step="5"
+                                            className="vt-editor__range"
+                                            value={selectedHotspot.rotateX ?? 75}
+                                            onChange={(e) => updateHotspot(selectedHotspot.id, { rotateX: parseInt(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div className="vt-editor__form-group">
+                                        <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Floor Spin (Rotation)</span>
+                                            <span className="vt-editor__range-value">{selectedHotspot.rotateZ ?? 0}°</span>
+                                        </label>
+                                        <div className="vt-editor__range-wrapper">
+                                            <input
+                                                type="range"
+                                                min="-180"
+                                                max="180"
+                                                step="5"
+                                                className="vt-editor__range"
+                                                value={selectedHotspot.rotateZ ?? 0}
+                                                onChange={(e) => updateHotspot(selectedHotspot.id, { rotateZ: parseInt(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedHotspot.renderMode === 'wall' && (
+                                <>
+                                    <div className="vt-editor__form-group">
+                                        <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Wall Slant (Perspective)</span>
+                                            <span className="vt-editor__range-value">{selectedHotspot.rotateY ?? 0}°</span>
+                                        </label>
+                                        <div className="vt-editor__range-wrapper">
+                                            <input
+                                                type="range"
+                                                min="-60"
+                                                max="60"
+                                                step="5"
+                                                className="vt-editor__range"
+                                                value={selectedHotspot.rotateY ?? 0}
+                                                onChange={(e) => updateHotspot(selectedHotspot.id, { rotateY: parseInt(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="vt-editor__form-group">
+                                        <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Wall Tilt (Vertical)</span>
+                                            <span className="vt-editor__range-value">{selectedHotspot.rotateZ ?? 0}°</span>
+                                        </label>
+                                        <div className="vt-editor__range-wrapper">
+                                            <input
+                                                type="range"
+                                                min="-45"
+                                                max="45"
+                                                step="5"
+                                                className="vt-editor__range"
+                                                value={selectedHotspot.rotateZ ?? 0}
+                                                onChange={(e) => updateHotspot(selectedHotspot.id, { rotateZ: parseInt(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         <button
                             onClick={() => deleteHotspot(selectedHotspot.id)}
                             style={{
                                 width: '100%',
-                                padding: '10px',
-                                background: 'rgba(239, 68, 68, 0.2)',
-                                border: '1px solid rgba(239, 68, 68, 0.5)',
-                                color: '#fca5a5',
+                                padding: '12px',
+                                background: 'transparent',
+                                border: '1px dashed #ef4444',
+                                color: '#ef4444',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
-                                marginTop: '12px'
+                                marginTop: '8px',
+                                fontSize: '13px',
+                                transition: 'all 0.2s'
                             }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                         >
-                            Delete Hotspot
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <span className="material-icons" style={{ fontSize: '16px' }}>delete</span>
+                                Remove Hotspot
+                            </div>
                         </button>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* 5. Bottom Filmstrip (Not Visible in Preview) */}
-            {!isPreviewMode && (
-                <div className="vt-editor__bottom-bar">
-                    <div className="vt-editor__filmstrip">
-                        {scenes.map((scene) => (
+            {
+                !isPreviewMode && (
+                    <div className="vt-editor__bottom-bar">
+                        <div className="vt-editor__filmstrip">
+                            {scenes.map((scene) => (
 
-                            <div
-                                key={scene.id}
-                                className={`vt-editor__scene-card ${activeSceneId === scene.id ? 'active' : ''}`}
-                                onClick={() => {
-                                    setActiveSceneId(scene.id);
-                                    setSelectedHotspotId(null);
-                                }}
-                                draggable={!isPreviewMode}
-                                onDragStart={(e) => {
-                                    e.dataTransfer.setData('sceneIndex', scenes.indexOf(scene).toString());
-                                    e.dataTransfer.effectAllowed = 'move';
-                                }}
-                                onDragOver={(e) => {
-                                    e.preventDefault(); // Allow drop
-                                    e.dataTransfer.dropEffect = 'move';
-                                }}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    const sourceIndex = parseInt(e.dataTransfer.getData('sceneIndex'), 10);
-                                    const targetIndex = scenes.indexOf(scene);
+                                <div
+                                    key={scene.id}
+                                    className={`vt-editor__scene-card ${activeSceneId === scene.id ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveSceneId(scene.id);
+                                        setSelectedHotspotId(null);
+                                    }}
+                                    draggable={!isPreviewMode}
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData('sceneIndex', scenes.indexOf(scene).toString());
+                                        e.dataTransfer.effectAllowed = 'move';
+                                    }}
+                                    onDragOver={(e) => {
+                                        e.preventDefault(); // Allow drop
+                                        e.dataTransfer.dropEffect = 'move';
+                                    }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        const sourceIndex = parseInt(e.dataTransfer.getData('sceneIndex'), 10);
+                                        const targetIndex = scenes.indexOf(scene);
 
-                                    if (sourceIndex !== targetIndex && !isNaN(sourceIndex)) {
-                                        const newScenes = [...scenes];
-                                        const [movedScene] = newScenes.splice(sourceIndex, 1);
-                                        newScenes.splice(targetIndex, 0, movedScene);
-                                        setScenes(newScenes);
-                                    }
-                                }}
-                            >
-                                <img src={scene.imageUrl} alt={scene.name} />
-                                <div className="vt-editor__scene-name">{scene.name}</div>
-
-                                {/* Delete Button Overlay */}
-                                <button
-                                    className="vt-editor__delete-scene-btn"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm('Yakin ingin menghapus scene ini?')) {
-                                            const newScenes = scenes.filter(s => s.id !== scene.id);
-                                            // Handle delete from Supabase if needed, or wait for save
+                                        if (sourceIndex !== targetIndex && !isNaN(sourceIndex)) {
+                                            const newScenes = [...scenes];
+                                            const [movedScene] = newScenes.splice(sourceIndex, 1);
+                                            newScenes.splice(targetIndex, 0, movedScene);
                                             setScenes(newScenes);
-                                            if (activeSceneId === scene.id) {
-                                                setActiveSceneId(newScenes[0]?.id || '');
-                                            }
                                         }
                                     }}
-                                    title="Hapus Scene"
                                 >
-                                    <span className="material-icons" style={{ fontSize: 14 }}>delete</span>
-                                </button>
+                                    <img src={scene.imageUrl} alt={scene.name} />
+                                    <div className="vt-editor__scene-name">{scene.name}</div>
+
+                                    {/* Delete Button Overlay */}
+                                    <button
+                                        className="vt-editor__delete-scene-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Yakin ingin menghapus scene ini?')) {
+                                                const newScenes = scenes.filter(s => s.id !== scene.id);
+                                                // Handle delete from Supabase if needed, or wait for save
+                                                setScenes(newScenes);
+                                                if (activeSceneId === scene.id) {
+                                                    setActiveSceneId(newScenes[0]?.id || '');
+                                                }
+                                            }
+                                        }}
+                                        title="Hapus Scene"
+                                    >
+                                        <span className="material-icons" style={{ fontSize: 14 }}>delete</span>
+                                    </button>
+                                </div>
+                            ))}
+                            <div className="vt-editor__add-scene" onClick={addScene}>
+                                <span className="material-icons" style={{ color: 'white' }}>add</span>
                             </div>
-                        ))}
-                        <div className="vt-editor__add-scene" onClick={addScene}>
-                            <span className="material-icons" style={{ color: 'white' }}>add</span>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Pannellum Styles Injection */}
             <style>{`
@@ -1664,7 +2029,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 
                 .editor-hotspot:hover .editor-hotspot__tooltip { opacity: 1; }
             `}</style>
-        </div>
+        </div >
     );
 };
 

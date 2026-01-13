@@ -1,0 +1,155 @@
+/* Hotspot Styles - Shared between DemoTourPage and VirtualTourEditor */
+
+/* Hide Pannellum about message */
+.pnlm-about-msg {
+    display: none !important;
+}
+
+/* Override Pannellum default hotspot transitions - NO DELAY */
+.pnlm-hotspot-base {
+    transition: none !important;
+}
+
+.pnlm-pointer {
+    transition: none !important;
+}
+
+.pnlm-hotspot {
+    transition: none !important;
+}
+
+.custom-hotspot {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    /* CSS Variables for customization */
+    --hs-scale: 1;
+    --hs-opacity: 1;
+    --hs-rotate-x: 0deg;
+    --hs-rotate-y: 0deg;
+    --hs-rotate-z: 0deg;
+    --hs-rotate-z: 0deg;
+    --hs-aspect-ratio: 1;
+    --hs-border-radius: 50%;
+
+    /* IMPORTANT: Do NOT apply transform here as it overrides Pannellum's positioning */
+    z-index: 2;
+    /* Ensure above other elements */
+}
+
+/* Wrapper for transform manipulations */
+.hotspot-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+
+    transform-origin: center center;
+    transform: scale(var(--hs-scale)) scaleX(var(--hs-aspect-ratio)) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
+    opacity: var(--hs-opacity);
+    transform-style: preserve-3d;
+}
+
+.custom-hotspot:hover .hotspot-inner {
+    /* Preserve custom scale and rotation on hover, add 15% extra scale */
+    --hs-hover-boost: 1.15;
+    transform: scale(calc(var(--hs-scale) * var(--hs-hover-boost))) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
+}
+
+/* Apply visuals to the inner wrapper so they rotate */
+.custom-hotspot--info .hotspot-inner {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.custom-hotspot--scene .hotspot-inner {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    animation: pulse-scene 2s infinite;
+}
+
+@keyframes pulse-scene {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+}
+
+.hotspot-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    /* Dynamic counter-rotation (Reverse order of parent: Z -> Y -> X) */
+    /* Enforce 2D Billboard - Reset all rotations */
+    transform: translateX(-50%) translateY(5px) rotate(0deg);
+    transform-style: flat;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.1s ease, transform 0.1s ease, visibility 0.1s;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    /* Reset Z-index to ensure it appears above the tilted icon */
+    z-index: 10;
+}
+
+.custom-hotspot:hover .hotspot-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) rotate(0deg);
+}
+
+/* ========================================
+   Floor / Wall / 2D Render Modes
+   ======================================== */
+
+/* 2D Mode: Ensure flat rendering (Billboard behavior, prevents 3D skewing) */
+.custom-hotspot--2d {
+    transform-style: flat !important;
+    /* Ensure no localized tilt residues */
+    --hs-rotate-x: 0deg;
+}
+
+.custom-hotspot--floor {
+    --hs-rotate-x: 75deg;
+}
+
+/* Counter-rotate tooltip for floor mode so it stays readable */
+/* REMOVED: Managed dynamically by calc() above */
+/* .custom-hotspot--floor .hotspot-tooltip rule removed */
+
+/* Selection state */
+.custom-hotspot--selected {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.5);
+}
+
+.custom-hotspot--blur .hotspot-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--hs-border-radius);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}

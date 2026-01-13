@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './DemoTourPage.css';
+import '../styles/Hotspots.css';
 
 // Declare pannellum on window
 declare global {
@@ -21,7 +22,17 @@ interface HotSpot {
     type: 'info' | 'scene';
     text: string;
     targetRoomId?: string;
-    icon?: 'arrow' | 'door' | 'info'; // Default: arrow for scene, info for info
+    icon?: 'arrow' | 'door' | 'info' | 'nav_arrow' | 'blur'; // Synced with Editor
+    scale?: number;
+    opacity?: number;
+    renderMode?: 'floor' | 'wall' | '2d';
+    rotateX?: number;
+    rotateZ?: number;
+    rotateY?: number;
+    aspectRatio?: number;
+    scaleY?: number;
+    blurShape?: 'circle' | 'rect';
+    interactionMode?: 'popup' | 'label';
 }
 
 const DemoTourPage: React.FC = () => {
@@ -48,6 +59,7 @@ const DemoTourPage: React.FC = () => {
                 { pitch: -5, yaw: 120, type: 'info', text: 'Lantai Marmer Italia Premium', icon: 'info' },
                 { pitch: 10, yaw: -30, type: 'info', text: 'AC 2 PK Daikin Inverter', icon: 'info' },
                 { pitch: -15, yaw: 180, type: 'scene', text: 'Ke Dapur', targetRoomId: 'kitchen', icon: 'door' },
+                { pitch: 0, yaw: 0, type: 'info', text: 'Blur Area', icon: 'blur', scale: 2 }, // Sample Blur
             ],
         },
         {
@@ -101,30 +113,88 @@ const DemoTourPage: React.FC = () => {
                 pitch: hs.pitch,
                 yaw: hs.yaw,
                 type: 'custom',
-                cssClass: hs.type === 'scene' ? 'custom-hotspot custom-hotspot--scene' : 'custom-hotspot custom-hotspot--info',
-                createTooltipFunc: (hotSpotDiv: HTMLElement) => {
-                    const icon = document.createElement('span');
-                    icon.className = 'material-icons hotspot-icon';
+                cssClass: (() => {
+                    const baseClass = 'custom-hotspot';
+                    // typeClass logic synced with Editor
+                    let typeClass = hs.type === 'scene' ? 'custom-hotspot--scene' : 'custom-hotspot--info';
+                    if (hs.icon === 'blur') typeClass = 'custom-hotspot--blur';
 
-                    // Icon mapping based on icon type
-                    const iconType = hs.icon || (hs.type === 'scene' ? 'arrow' : 'info');
-                    switch (iconType) {
-                        case 'door':
-                            icon.textContent = 'meeting_room'; // Door icon
-                            break;
-                        case 'arrow':
-                            icon.textContent = 'north'; // Arrow up (like 3DVista)
-                            break;
-                        case 'info':
-                        default:
-                            icon.textContent = 'info';
-                            break;
+                    const renderClass = hs.renderMode === 'floor' ? 'custom-hotspot--floor'
+                        : (hs.renderMode === '2d' ? 'custom-hotspot--2d' : '');
+                    return `${baseClass} ${typeClass} ${renderClass}`.trim();
+                })(),
+                createTooltipFunc: (hotSpotDiv: HTMLElement) => {
+                    // Apply scale
+                    const scaleValue = hs.scale ?? 1;
+                    hotSpotDiv.style.setProperty('--hs-scale', String(scaleValue));
+
+                    if (hs.aspectRatio) {
+                        hotSpotDiv.style.setProperty('--hs-aspect-ratio', String(hs.aspectRatio));
                     }
 
-                    // All icons white for clean look
-                    icon.style.fontSize = hs.type === 'scene' ? '24px' : '22px';
-                    icon.style.color = '#ffffff';
-                    hotSpotDiv.appendChild(icon);
+                    if (hs.scaleY) {
+                        hotSpotDiv.style.setProperty('--hs-scale-y', String(hs.scaleY));
+                    }
+
+                    if (hs.icon === 'blur') {
+                        const radius = hs.blurShape === 'rect' ? '8px' : '50%';
+                        hotSpotDiv.style.setProperty('--hs-border-radius', radius);
+                    }
+
+                    // Apply opacity
+                    if (hs.opacity !== undefined && hs.opacity !== null) {
+                        hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity));
+                    } else {
+                        hotSpotDiv.style.setProperty('--hs-opacity', '1');
+                    }
+
+                    // Apply floor rotation (X)
+                    if (hs.renderMode === 'floor') {
+                        const tilt = hs.rotateX !== undefined ? hs.rotateX : 75;
+                        hotSpotDiv.style.setProperty('--hs-rotate-x', `${tilt}deg`);
+                    }
+
+                    // Apply wall rotation (Z)
+                    if (hs.renderMode === 'wall') {
+                        const tiltZ = hs.rotateZ ?? 0;
+                        const tiltY = hs.rotateY ?? 0;
+                        hotSpotDiv.style.setProperty('--hs-rotate-z', `${tiltZ}deg`);
+                        hotSpotDiv.style.setProperty('--hs-rotate-y', `${tiltY}deg`);
+                    }
+
+                    // Wrapper for transforms
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'hotspot-inner';
+                    hotSpotDiv.appendChild(wrapper);
+
+                    const icon = document.createElement('span');
+
+                    if (hs.icon === 'arrow') {
+                        // Arrow/Floor: Custom Circle SVG
+                        icon.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="2"/></svg>`;
+                        icon.className = 'hotspot-icon';
+                        icon.style.display = 'flex';
+                        icon.style.alignItems = 'center';
+                        icon.style.justifyContent = 'center';
+                    } else if (hs.icon === 'door' || hs.icon === 'nav_arrow' || (hs.type === 'scene' && !hs.icon)) {
+                        // Door or Arrow or Default Scene: Material icon
+                        icon.className = 'material-icons hotspot-icon';
+                        icon.textContent = hs.icon === 'door' ? 'meeting_room' : 'arrow_upward';
+                        if (hs.type === 'scene' && !hs.icon) icon.textContent = 'arrow_upward'; // Default
+
+                        icon.style.color = '#ffffff';
+                        icon.style.fontSize = '24px';
+                    } else if (hs.icon === 'blur') {
+                        // Blur: No visible icon, just the effect
+                        icon.style.display = 'none';
+                    } else {
+                        // Info Icon
+                        icon.className = 'material-icons hotspot-icon';
+                        icon.textContent = 'info';
+                        icon.style.fontSize = '22px';
+                        icon.style.color = '#ffffff';
+                    }
+                    wrapper.appendChild(icon);
 
                     const tooltip = document.createElement('div');
                     tooltip.className = 'hotspot-tooltip';
@@ -142,7 +212,10 @@ const DemoTourPage: React.FC = () => {
                             setActiveInfoCard(null);
                         }, 400);
                     } else if (hs.type === 'info') {
-                        setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        // Only open popup if not in "label only" mode
+                        if (hs.interactionMode !== 'label') {
+                            setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        }
                     }
                 },
             }));
@@ -379,73 +452,7 @@ const DemoTourPage: React.FC = () => {
             </div>
 
             {/* Hotspot Styles */}
-            <style>{`
-                /* Hide Pannellum about message */
-                .pnlm-about-msg {
-                    display: none !important;
-                }
-                
-                /* Override Pannellum default hotspot transitions - NO DELAY */
-                .pnlm-hotspot-base {
-                    transition: none !important;
-                }
-                .pnlm-pointer {
-                    transition: none !important;
-                }
-                .pnlm-hotspot {
-                    transition: none !important;
-                }
-                
-                .custom-hotspot {
-                    width: 44px;
-                    height: 44px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: transform 0.15s ease;
-                }
-                .custom-hotspot:hover { transform: scale(1.15); }
-                .custom-hotspot--info {
-                    background: rgba(0, 0, 0, 0.6);
-                    border-radius: 50%;
-                    border: 2px solid rgba(255, 255, 255, 0.6);
-                }
-                .custom-hotspot--scene {
-                    background: rgba(34, 197, 94, 0.4);
-                    border-radius: 50%;
-                    border: 2px solid #22c55e;
-                    animation: pulse-scene 2s infinite;
-                }
-                @keyframes pulse-scene {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-                    50% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-                }
-                .hotspot-tooltip {
-                    position: absolute;
-                    bottom: 100%;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(5px);
-                    background: rgba(0, 0, 0, 0.9);
-                    color: white;
-                    padding: 8px 14px;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    white-space: nowrap;
-                    opacity: 0;
-                    visibility: hidden;
-                    pointer-events: none;
-                    transition: opacity 0.1s ease, transform 0.1s ease, visibility 0.1s;
-                    margin-bottom: 8px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                }
-                .custom-hotspot:hover .hotspot-tooltip { 
-                    opacity: 1; 
-                    visibility: visible;
-                    transform: translateX(-50%) translateY(0);
-                }
-            `}</style>
+            {/* Hotspot Styles - Moved to src/styles/Hotspots.css */}
         </div>
     );
 };

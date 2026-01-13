@@ -45,6 +45,27 @@ const EditTourPage: React.FC = () => {
     const [embedHeight, setEmbedHeight] = useState('500');
     const [copied, setCopied] = useState<'link' | 'embed' | null>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            alert('File too large (Max 5MB)');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            setFormData(prev => ({ ...prev, coverImage: reader.result as string }));
+        };
+        reader.onerror = (error) => {
+            console.error('Error reading file:', error);
+            alert('Failed to read file');
+        };
+    };
 
     // Generate URLs
     const baseUrl = window.location.origin;
@@ -358,10 +379,21 @@ const EditTourPage: React.FC = () => {
                                     <label className="form-label">Cover Image (Thumbnail)</label>
                                     <div className="image-upload-preview">
                                         <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
-                                        <button type="button" className="btn-upload">
+                                        <button
+                                            type="button"
+                                            className="btn-upload"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
                                             <span className="material-icons">cloud_upload</span>
                                             Ganti Gambar
                                         </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            style={{ display: 'none' }}
+                                            accept="image/*"
+                                            onChange={handleCoverUpload}
+                                        />
                                     </div>
                                 </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import './DemoTourPage.css'; // Reuse existing styles
+import '../styles/Hotspots.css';
 
 // Declare pannellum on window
 declare global {
@@ -25,7 +26,18 @@ interface HotSpot {
     type: 'info' | 'scene';
     text: string;
     targetRoomId?: string;
-    icon?: 'arrow' | 'door' | 'info';
+    icon?: 'arrow' | 'door' | 'info' | 'nav_arrow' | 'blur';
+    scale?: number;
+    renderMode?: 'floor' | 'wall' | '2d';
+
+    opacity?: number;
+    rotateX?: number;
+    rotateZ?: number;
+    rotateY?: number;
+    aspectRatio?: number;
+    scaleY?: number;
+    blurShape?: 'circle' | 'rect';
+    interactionMode?: 'popup' | 'label';
 }
 
 const TourPage: React.FC = () => {
@@ -124,7 +136,17 @@ const TourPage: React.FC = () => {
                             type: h.target_room_id ? 'scene' : 'info',
                             text: h.text || '',
                             targetRoomId: h.target_room_id,
-                            icon: (h.icon as any) || (h.target_room_id ? 'arrow' : 'info')
+                            icon: (h.icon as any) || (h.target_room_id ? 'arrow' : 'info'),
+                            scale: h.scale || 1,
+                            renderMode: h.render_mode || '2d',
+                            rotateX: h.rotate_x,
+                            rotateZ: h.rotate_z,
+                            rotateY: h.rotate_y,
+                            aspectRatio: h.aspect_ratio,
+                            scaleY: h.scale_y,
+                            blurShape: h.blur_shape,
+                            opacity: h.opacity,
+                            interactionMode: h.interaction_mode as 'popup' | 'label'
                         }))
                 }));
 
@@ -156,7 +178,7 @@ const TourPage: React.FC = () => {
                     thumbImg.src = room.thumbnail;
                 }
             });
-            console.log(`Preloaded ${rooms.length} scene images`);
+            // console.log(`Preloaded ${rooms.length} scene images`);
         }, 1000); // Wait 1 second after first load
 
         return () => clearTimeout(preloadTimeout);
@@ -179,24 +201,90 @@ const TourPage: React.FC = () => {
                 pitch: hs.pitch,
                 yaw: hs.yaw,
                 type: 'custom',
-                cssClass: hs.type === 'scene' ? 'custom-hotspot custom-hotspot--scene' : 'custom-hotspot custom-hotspot--info',
+                // Determine CSS class based on type and render mode
+                cssClass: (() => {
+                    const baseClass = 'custom-hotspot';
+                    let typeClass = hs.type === 'scene' ? 'custom-hotspot--scene' : 'custom-hotspot--info';
+                    if (hs.icon === 'blur') typeClass = 'custom-hotspot--blur';
+
+                    const renderClass = hs.renderMode === 'floor' ? 'custom-hotspot--floor'
+                        : (hs.renderMode === '2d' ? 'custom-hotspot--2d' : '');
+                    return `${baseClass} ${typeClass} ${renderClass}`.trim();
+                })(),
                 createTooltipFunc: (hotSpotDiv: HTMLElement) => {
-                    const icon = document.createElement('span');
-                    icon.className = 'material-icons hotspot-icon';
+                    // Apply scale from database
+                    const scaleValue = hs.scale ?? 1;
+                    hotSpotDiv.style.setProperty('--hs-scale', String(scaleValue));
 
-                    // Icon mapping
-                    let iconType = hs.icon || (hs.type === 'scene' ? 'arrow' : 'info');
-                    if (hs.type === 'scene' && !hs.icon) iconType = 'arrow'; // Fallback
-
-                    switch (iconType) {
-                        case 'door': icon.textContent = 'meeting_room'; break;
-                        case 'arrow': icon.textContent = 'north'; break;
-                        case 'info': default: icon.textContent = 'info'; break;
+                    if (hs.aspectRatio) {
+                        hotSpotDiv.style.setProperty('--hs-aspect-ratio', String(hs.aspectRatio));
                     }
 
-                    icon.style.fontSize = hs.type === 'scene' ? '24px' : '22px';
-                    icon.style.color = '#ffffff';
-                    hotSpotDiv.appendChild(icon);
+                    if (hs.scaleY) {
+                        hotSpotDiv.style.setProperty('--hs-scale-y', String(hs.scaleY));
+                    }
+
+                    if (hs.icon === 'blur') {
+                        const radius = hs.blurShape === 'rect' ? '8px' : '50%';
+                        hotSpotDiv.style.setProperty('--hs-border-radius', radius);
+                    }
+
+                    // Apply opacity
+                    if (hs.opacity !== undefined && hs.opacity !== null) {
+                        hotSpotDiv.style.setProperty('--hs-opacity', String(hs.opacity));
+                    } else {
+                        hotSpotDiv.style.setProperty('--hs-opacity', '1');
+                    }
+
+                    // Apply floor rotation via CSS variable (dynamic or default)
+                    if (hs.renderMode === 'floor') {
+                        const tilt = hs.rotateX ?? 75;
+                        hotSpotDiv.style.setProperty('--hs-rotate-x', `${tilt}deg`);
+                    }
+
+                    // Apply wall rotation (Z) via CSS variable
+                    if (hs.renderMode === 'wall') {
+                        const tiltZ = hs.rotateZ ?? 0;
+                        const tiltY = hs.rotateY ?? 0;
+                        hotSpotDiv.style.setProperty('--hs-rotate-z', `${tiltZ}deg`);
+                        hotSpotDiv.style.setProperty('--hs-rotate-y', `${tiltY}deg`);
+                    }
+
+                    // Create wrapper for transforms
+
+                    // Wrapper
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'hotspot-inner';
+                    hotSpotDiv.appendChild(wrapper);
+
+                    const icon = document.createElement('span');
+
+                    if (hs.icon === 'arrow') {
+                        // Arrow: Circle SVG for navigation
+                        icon.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="2"/></svg>`;
+                        icon.className = 'hotspot-icon';
+                        icon.style.display = 'flex';
+                        icon.style.alignItems = 'center';
+                        icon.style.justifyContent = 'center';
+                    } else if (hs.icon === 'door' || hs.icon === 'nav_arrow' || (hs.type === 'scene' && !hs.icon)) {
+                        // Door or Arrow or Default Scene: Material icon
+                        icon.className = 'material-icons hotspot-icon';
+                        icon.textContent = hs.icon === 'door' ? 'meeting_room' : 'arrow_upward';
+                        if (hs.type === 'scene' && !hs.icon) icon.textContent = 'arrow_upward'; // Default
+
+                        icon.style.color = '#ffffff';
+                        icon.style.fontSize = '24px';
+                    } else if (hs.icon === 'blur') {
+                        // Blur: No visible icon
+                        icon.style.display = 'none';
+                    } else {
+                        // Info Icon
+                        icon.className = 'material-icons hotspot-icon';
+                        icon.textContent = 'info';
+                        icon.style.fontSize = '22px';
+                        icon.style.color = '#ffffff';
+                    }
+                    wrapper.appendChild(icon);
 
                     const tooltip = document.createElement('div');
                     tooltip.className = 'hotspot-tooltip';
@@ -218,7 +306,10 @@ const TourPage: React.FC = () => {
                             setActiveInfoCard(null);
                         }, 400);
                     } else if (hs.type === 'info') {
-                        setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        // Only open popup if not in "label only" mode
+                        if (hs.interactionMode !== 'label') {
+                            setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
+                        }
                     }
                 },
             }));
@@ -664,38 +755,7 @@ const TourPage: React.FC = () => {
             )}
 
             {/* Hotspot Styles - Reusing same styles as Demo */}
-            <style>{`
-                .pnlm-container { background: #000 !important; }
-                .pnlm-about-msg { display: none !important; }
-                .pnlm-hotspot-base, .pnlm-pointer, .pnlm-hotspot { transition: none !important; }
-                
-                .custom-hotspot {
-                    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; transition: transform 0.15s ease;
-                }
-                .custom-hotspot:hover { transform: scale(1.15); }
-                .custom-hotspot--info {
-                    background: rgba(0, 0, 0, 0.6); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6);
-                }
-                .custom-hotspot--scene {
-                    background: rgba(34, 197, 94, 0.4); border-radius: 50%; border: 2px solid #22c55e;
-                    animation: pulse-scene 2s infinite;
-                }
-                @keyframes pulse-scene {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-                    50% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-                }
-                .hotspot-tooltip {
-                    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(5px);
-                    background: rgba(0, 0, 0, 0.9); color: white; padding: 8px 14px; border-radius: 8px;
-                    font-size: 13px; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden;
-                    pointer-events: none; transition: opacity 0.1s ease, transform 0.1s ease, visibility 0.1s;
-                    margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                }
-                .custom-hotspot:hover .hotspot-tooltip { 
-                    opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
-                }
-            `}</style>
+            {/* Hotspot Styles - Moved to src/styles/Hotspots.css */}
         </div>
     );
 };
