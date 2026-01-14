@@ -9,6 +9,7 @@ import TrustLogos from './components/TrustLogos/TrustLogos';
 import ProblemSolution from './components/ProblemSolution/ProblemSolution';
 import Portfolio from './components/Portfolio/Portfolio';
 import Process from './components/Process/Process';
+import Pricing from './components/Pricing';
 import Footer from './components/Footer/Footer';
 
 // Lazy loaded pages for code splitting (reduces initial bundle size)
@@ -56,6 +57,7 @@ const HomePage: React.FC = () => {
         <ProblemSolution />
         <Portfolio />
         <Process />
+        <Pricing />
       </main>
       <Footer />
     </div>
