@@ -57,6 +57,9 @@ const TourPage: React.FC = () => {
     const [activeInfoCard, setActiveInfoCard] = useState<string | null>(null);
     const [isRoomSelectorOpen, setIsRoomSelectorOpen] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [isGyroEnabled, setIsGyroEnabled] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const isGyroEnabledRef = useRef(false); // To track state in event listeners
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const hasPlayedIntro = useRef(false);
     const lastObjectUrl = useRef<string | null>(null);
@@ -76,8 +79,7 @@ const TourPage: React.FC = () => {
     const [agentWhatsapp, setAgentWhatsapp] = useState<string>('');
 
     // Mobile & Gyro State
-    const [isMobile, setIsMobile] = useState(false);
-    const [isGyroEnabled, setIsGyroEnabled] = useState(false);
+
 
     // Get current room data
     useEffect(() => {
@@ -348,7 +350,7 @@ const TourPage: React.FC = () => {
                             setActiveInfoCard(activeInfoCard === hs.text ? null : hs.text);
                         }
                     }
-                },
+                }
             }));
 
             // Add Nadir/Tripod Cap
@@ -514,6 +516,11 @@ const TourPage: React.FC = () => {
                     if (viewerRef.current) {
                         viewerRef.current.addEventListener('contextmenu', (e) => e.preventDefault());
                     }
+
+                    // Persist Gyro state if enabled (scene change stops it by default)
+                    if (isGyroEnabledRef.current && pannellumInstance.current) {
+                        pannellumInstance.current.startOrientation();
+                    }
                 });
 
                 pannellumInstance.current.on('error', (err: any) => {
@@ -562,6 +569,23 @@ const TourPage: React.FC = () => {
         };
     }, [currentRoomId, currentRoom, nadirEnabled, nadirUrl]);
 
+    // Detect Mobile Device
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+            if (/android/i.test(userAgent)) {
+                setIsMobile(true);
+                return;
+            }
+            if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+                setIsMobile(true);
+                return;
+            }
+            setIsMobile(false);
+        };
+        checkMobile();
+    }, []);
+
 
 
     // Controls
@@ -607,6 +631,36 @@ const TourPage: React.FC = () => {
         }, 300);
     };
 
+    const handleGyroToggle = () => {
+        if (!pannellumInstance.current) return;
+
+        if (!isGyroEnabled) {
+            // Enabling Gyro
+            if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+                // iOS 13+ requires permission
+                (DeviceOrientationEvent as any).requestPermission()
+                    .then((permissionState: string) => {
+                        if (permissionState === 'granted') {
+                            pannellumInstance.current.startOrientation();
+                            setIsGyroEnabled(true);
+                            isGyroEnabledRef.current = true;
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS or older devices
+                pannellumInstance.current.startOrientation();
+                setIsGyroEnabled(true);
+                isGyroEnabledRef.current = true;
+            }
+        } else {
+            // Disabling Gyro
+            pannellumInstance.current.stopOrientation();
+            setIsGyroEnabled(false);
+            isGyroEnabledRef.current = false;
+        }
+    };
+
     // Sync state with browser fullscreen changes (e.g. Esc key)
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -650,37 +704,7 @@ const TourPage: React.FC = () => {
 
 
 
-    const handleGyroToggle = () => {
-        if (!pannellumInstance.current) return;
 
-        if (!isGyroEnabled) {
-            // Enable Gyro
-            // iOS 13+ requires permission request
-            if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-                (DeviceOrientationEvent as any).requestPermission()
-                    .then((permissionState: string) => {
-                        if (permissionState === 'granted') {
-                            pannellumInstance.current.startOrientation();
-                            setIsGyroEnabled(true);
-                            // Initial listener to force update if needed, though Pannellum handles it
-                        } else {
-                            alert('Izin akses Gyroscope ditolak.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                // Non-iOS 13+ devices
-                pannellumInstance.current.startOrientation();
-                setIsGyroEnabled(true);
-            }
-        } else {
-            // Disable Gyro
-            pannellumInstance.current.stopOrientation();
-            // Reset to initial pitch/yaw? Or keep current view?
-            // Usually stopping leaves it where it is.
-            setIsGyroEnabled(false);
-        }
-    };
 
     // Controls Render
     // ...
@@ -695,6 +719,12 @@ const TourPage: React.FC = () => {
                     transition: 'transform 0.6s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.4s ease',
                     transform: isTransitioning ? 'scale(1.4)' : 'scale(1)',
                     opacity: isTransitioning ? 0 : 1
+                }}
+                onTouchEnd={() => {
+                    if (isGyroEnabledRef.current && pannellumInstance.current) {
+                        // Resume gyro if it was enabled
+                        pannellumInstance.current.startOrientation();
+                    }
                 }}
             />
 
@@ -776,7 +806,7 @@ const TourPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Navigation Arrows - Hide if single room? Or keep for ease */}
+            {/* Navigation Arrows */}
             {rooms.length > 1 && (
                 <>
                     <button onClick={handlePrevRoom} className="demo-page__nav-arrow demo-page__nav-arrow--left">
@@ -824,59 +854,63 @@ const TourPage: React.FC = () => {
             </button>
 
             {/* WhatsApp Button */}
-            {agentWhatsapp && (
-                <a
-                    href={`https://wa.me/${agentWhatsapp.replace(/[^0-9]/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="demo-page__whatsapp"
-                    title="Hubungi Kami"
-                >
-                    <span className="demo-page__whatsapp-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <g fill="none">
-                                <path d="M24 0v24H0V0zM12.593 23.258l-.011.002-.071.035-.02.004-.014-.004-.071-.035q-.016-.005-.024.005l-.004.01-.017.428.005.02.01.013.104.074.015.004.012-.004.104-.074.012-.016.004-.017-.017-.427q-.004-.016-.017-.018m.265-.113-.013.002-.185.093-.01.01-.003.011.018.43.005.012.008.007.201.093q.019.005.029-.008l.004-.014-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014-.034.614q.001.018.017.024l.015-.002.201-.093.01-.008.004-.011.017-.43-.003-.012-.01-.01z" />
-                                <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.863-1.26l-.305-.178-3.032.892a1.01 1.01 0 0 1-1.28-1.145l.026-.109.892-3.032A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.759 12.282c.198.312.283.696.216 1.077l-.039.163-.441 1.501 1.501-.441c.433-.128.883-.05 1.24.177A8 8 0 1 0 12 4M9.102 7.184a.7.7 0 0 1 .684.075c.504.368.904.862 1.248 1.344l.327.474.153.225a.71.71 0 0 1-.046.864l-.075.076-.924.686a.23.23 0 0 0-.067.291c.21.38.581.947 1.007 1.373.427.426 1.02.822 1.426 1.055.088.05.194.034.266-.031l.038-.045.601-.915a.71.71 0 0 1 .973-.158l.543.379c.54.385 1.059.799 1.47 1.324a.7.7 0 0 1 .089.703c-.396.924-1.399 1.711-2.441 1.673l-.159-.01-.191-.018-.108-.014-.238-.04c-.924-.174-2.405-.698-3.94-2.232-1.534-1.535-2.058-3.016-2.232-3.94l-.04-.238-.025-.208-.013-.175-.004-.075c-.038-1.044.753-2.047 1.678-2.443" fill="currentColor" />
-                            </g>
-                        </svg>
-                    </span>
-                    <span className="demo-page__whatsapp-text">Hubungi Kami</span>
-                </a>
-            )}
+            {
+                agentWhatsapp && (
+                    <a
+                        href={`https://wa.me/${agentWhatsapp.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="demo-page__whatsapp"
+                        title="Hubungi Kami"
+                    >
+                        <span className="demo-page__whatsapp-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none">
+                                    <path d="M24 0v24H0V0zM12.593 23.258l-.011.002-.071.035-.02.004-.014-.004-.071-.035q-.016-.005-.024.005l-.004.01-.017.428.005.02.01.013.104.074.015.004.012-.004.104-.074.012-.016.004-.017-.017-.427q-.004-.016-.017-.018m.265-.113-.013.002-.185.093-.01.01-.003.011.018.43.005.012.008.007.201.093q.019.005.029-.008l.004-.014-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014-.034.614q.001.018.017.024l.015-.002.201-.093.01-.008.004-.011.017-.43-.003-.012-.01-.01z" />
+                                    <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.863-1.26l-.305-.178-3.032.892a1.01 1.01 0 0 1-1.28-1.145l.026-.109.892-3.032A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.759 12.282c.198.312.283.696.216 1.077l-.039.163-.441 1.501 1.501-.441c.433-.128.883-.05 1.24.177A8 8 0 1 0 12 4M9.102 7.184a.7.7 0 0 1 .684.075c.504.368.904.862 1.248 1.344l.327.474.153.225a.71.71 0 0 1-.046.864l-.075.076-.924.686a.23.23 0 0 0-.067.291c.21.38.581.947 1.007 1.373.427.426 1.02.822 1.426 1.055.088.05.194.034.266-.031l.038-.045.601-.915a.71.71 0 0 1 .973-.158l.543.379c.54.385 1.059.799 1.47 1.324a.7.7 0 0 1 .089.703c-.396.924-1.399 1.711-2.441 1.673l-.159-.01-.191-.018-.108-.014-.238-.04c-.924-.174-2.405-.698-3.94-2.232-1.534-1.535-2.058-3.016-2.232-3.94l-.04-.238-.025-.208-.013-.175-.004-.075c-.038-1.044.753-2.047 1.678-2.443" fill="currentColor" />
+                                </g>
+                            </svg>
+                        </span>
+                        <span className="demo-page__whatsapp-text">Hubungi Kami</span>
+                    </a>
+                )
+            }
 
             {/* Back Button - Hide if Embed */}
 
 
             {/* Room Selector */}
-            {rooms.length > 1 && (
-                <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>
-                    <button className="demo-page__room-toggle" onClick={() => setIsRoomSelectorOpen(!isRoomSelectorOpen)}>
-                        <span className="demo-page__room-toggle-label">
-                            <span className="material-icons">meeting_room</span>
-                            {currentRoom.name}
-                        </span>
-                        <span className={`material-icons demo-page__room-toggle-arrow ${isRoomSelectorOpen ? 'rotated' : ''}`}>expand_less</span>
-                    </button>
-                    <div className={`demo-page__room-list ${isRoomSelectorOpen ? 'demo-page__room-list--open' : ''}`}>
-                        {rooms.map((room) => (
-                            <button
-                                key={room.id}
-                                onClick={() => { setCurrentRoomId(room.id); setIsRoomSelectorOpen(false); }}
-                                className={`demo-page__room-btn ${currentRoomId === room.id ? 'demo-page__room-btn--active' : ''}`}
-                            >
-                                <span className="material-icons demo-page__room-btn-icon">
-                                    {room.id === currentRoomId ? 'radio_button_checked' : 'radio_button_unchecked'}
-                                </span>
-                                {room.name}
-                            </button>
-                        ))}
+            {
+                rooms.length > 1 && (
+                    <div className={`demo-page__room-selector ${isRoomSelectorOpen ? 'demo-page__room-selector--open' : ''}`}>
+                        <button className="demo-page__room-toggle" onClick={() => setIsRoomSelectorOpen(!isRoomSelectorOpen)}>
+                            <span className="demo-page__room-toggle-label">
+                                <span className="material-icons">meeting_room</span>
+                                {currentRoom.name}
+                            </span>
+                            <span className={`material-icons demo-page__room-toggle-arrow ${isRoomSelectorOpen ? 'rotated' : ''}`}>expand_less</span>
+                        </button>
+                        <div className={`demo-page__room-list ${isRoomSelectorOpen ? 'demo-page__room-list--open' : ''}`}>
+                            {rooms.map((room) => (
+                                <button
+                                    key={room.id}
+                                    onClick={() => { setCurrentRoomId(room.id); setIsRoomSelectorOpen(false); }}
+                                    className={`demo-page__room-btn ${currentRoomId === room.id ? 'demo-page__room-btn--active' : ''}`}
+                                >
+                                    <span className="material-icons demo-page__room-btn-icon">
+                                        {room.id === currentRoomId ? 'radio_button_checked' : 'radio_button_unchecked'}
+                                    </span>
+                                    {room.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Hotspot Styles - Reusing same styles as Demo */}
             {/* Hotspot Styles - Moved to src/styles/Hotspots.css */}
-        </div>
+        </div >
     );
 };
 

@@ -138,7 +138,7 @@ const EditTourPage: React.FC = () => {
                     price: data.price || '',
                     agentName: data.agent_name || '',
                     agentWhatsapp: data.agent_whatsapp || '',
-                    coverImage: data.thumbnail_url || 'https://via.placeholder.com/800x600?text=No+Cover+Image',
+                    coverImage: data.thumbnail_url || 'https://placehold.co/800x600?text=No+Cover+Image',
                     clientName: data.client_name || '',
                     clientLogo: data.client_logo || '',
 
@@ -212,7 +212,7 @@ const EditTourPage: React.FC = () => {
         <div className="page-wrapper">
             <Navbar />
 
-            <main className="editor-layout">
+            <div className="editor-layout">
                 {/* Sidebar Navigation */}
                 <aside className="editor-sidebar">
                     <div className="editor-sidebar__header">
@@ -224,7 +224,7 @@ const EditTourPage: React.FC = () => {
 
                     {/* Project Info */}
                     <div className="editor-sidebar__project">
-                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Image'} alt={formData.title} className="editor-sidebar__thumb" />
+                        <img src={formData.coverImage || 'https://placehold.co/400x300?text=No+Image'} alt={formData.title} className="editor-sidebar__thumb" />
                         <div className="editor-sidebar__project-info">
                             <h3 className="editor-sidebar__project-title">{formData.title}</h3>
                             <span className="editor-sidebar__project-status">Published</span>
@@ -249,8 +249,21 @@ const EditTourPage: React.FC = () => {
                     </nav>
                 </aside>
 
-                {/* Main Content */}
-                <div className={`editor-content ${activeTab === '360' ? 'editor-content--full' : ''}`}>
+                {/* Content Area */}
+                <main className="editor-content">
+                    {/* 360 Editor Tab */}
+                    {activeTab === '360' && (
+                        <div className="editor-canvas-card">
+                            <VirtualTourEditor
+                                tourId={id!}
+                            // isPreviewMode={isPreviewMode} // Assuming these props are new and need to be defined elsewhere
+                            // setIsPreviewMode={setIsPreviewMode}
+                            // isMaximized={isMaximized}
+                            // setIsMaximized={setIsMaximized}
+                            />
+                        </div>
+                    )}
+
                     {activeTab !== '360' && (
                         <header className="editor-header">
                             <h1 className="editor-title">
@@ -274,12 +287,7 @@ const EditTourPage: React.FC = () => {
                         </header>
                     )}
 
-                    {/* 360 Editor Tab */}
-                    {activeTab === '360' && (
-                        <div className="editor-form editor-form--360">
-                            <VirtualTourEditor tourId={id} />
-                        </div>
-                    )}
+
 
                     {/* Info Tab */}
                     {activeTab === 'info' && (
@@ -427,7 +435,7 @@ const EditTourPage: React.FC = () => {
                                 <div className="form-group">
                                     <label className="form-label">Cover Image (Thumbnail)</label>
                                     <div className="image-upload-preview">
-                                        <img src={formData.coverImage || 'https://via.placeholder.com/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
+                                        <img src={formData.coverImage || 'https://placehold.co/400x300?text=No+Cover'} alt="Cover Preview" className="image-preview" />
                                         <button
                                             type="button"
                                             className="btn-upload"
@@ -444,7 +452,7 @@ const EditTourPage: React.FC = () => {
                                             onChange={handleCoverUpload}
                                         />
                                     </div>
-                                </div>
+                                </div >
 
                                 <div className="form-row">
                                     <div className="form-group">
@@ -469,100 +477,115 @@ const EditTourPage: React.FC = () => {
                                         />
                                     </div>
                                 </div>
-                            </section>
-                        </form>
+                            </section >
+                        </form >
                     )}
 
                     {/* Share & Embed Tab */}
-                    {activeTab === 'share' && (
-                        <div className="share-section">
-                            {/* Direct Link */}
-                            <section className="share-card">
-                                <div className="share-card__header">
-                                    <span className="material-icons share-card__icon">link</span>
-                                    <div>
-                                        <h3 className="share-card__title">Link Virtual Tour</h3>
-                                        <p className="share-card__desc">Share link ini ke calon pembeli atau posting di media sosial</p>
+                    {
+                        activeTab === 'share' && (
+                            <div className="share-section">
+                                {/* Direct Link */}
+                                <section className="share-card">
+                                    <div className="share-card__header">
+                                        <span className="material-icons share-card__icon">link</span>
+                                        <div>
+                                            <h3 className="share-card__title">Link Virtual Tour</h3>
+                                            <p className="share-card__desc">Share link ini ke calon pembeli atau posting di media sosial</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="share-card__content">
-                                    <div className="share-input-group">
-                                        <input
-                                            type="text"
-                                            value={tourUrl}
-                                            readOnly
-                                            className="share-input"
-                                        />
-                                        <button
-                                            onClick={() => copyToClipboard(tourUrl, 'link')}
-                                            className={`share-copy-btn ${copied === 'link' ? 'copied' : ''}`}
-                                        >
-                                            <span className="material-icons">
-                                                {copied === 'link' ? 'check' : 'content_copy'}
-                                            </span>
-                                            {copied === 'link' ? 'Tersalin!' : 'Salin'}
-                                        </button>
-                                    </div>
-                                    <a href={tourUrl} target="_blank" rel="noopener noreferrer" className="share-preview-link">
-                                        <span className="material-icons">open_in_new</span>
-                                        Buka di tab baru
-                                    </a>
-                                </div>
-                            </section>
-
-                            {/* Embed Code */}
-                            <section className="share-card">
-                                <div className="share-card__header">
-                                    <span className="material-icons share-card__icon">code</span>
-                                    <div>
-                                        <h3 className="share-card__title">Embed di Website</h3>
-                                        <p className="share-card__desc">Pasang virtual tour di website Anda dengan iframe</p>
-                                    </div>
-                                </div>
-                                <div className="share-card__content">
-                                    {/* Embed Options */}
-                                    <div className="embed-options">
-                                        <label className="embed-option">
+                                    <div className="share-card__content">
+                                        <div className="share-input-group">
                                             <input
-                                                type="radio"
-                                                name="embedSize"
-                                                checked={embedSize === 'responsive'}
-                                                onChange={() => setEmbedSize('responsive')}
+                                                type="text"
+                                                value={tourUrl}
+                                                readOnly
+                                                className="share-input"
                                             />
-                                            <span className="embed-option__label">
-                                                <span className="material-icons">aspect_ratio</span>
-                                                Responsive (100% width)
-                                            </span>
-                                        </label>
-                                        <label className="embed-option">
-                                            <input
-                                                type="radio"
-                                                name="embedSize"
-                                                checked={embedSize === 'fixed'}
-                                                onChange={() => setEmbedSize('fixed')}
-                                            />
-                                            <span className="embed-option__label">
-                                                <span className="material-icons">crop_free</span>
-                                                Fixed Size
-                                            </span>
-                                        </label>
+                                            <button
+                                                onClick={() => copyToClipboard(tourUrl, 'link')}
+                                                className={`share-copy-btn ${copied === 'link' ? 'copied' : ''}`}
+                                            >
+                                                <span className="material-icons">
+                                                    {copied === 'link' ? 'check' : 'content_copy'}
+                                                </span>
+                                                {copied === 'link' ? 'Tersalin!' : 'Salin'}
+                                            </button>
+                                        </div>
+                                        <a href={tourUrl} target="_blank" rel="noopener noreferrer" className="share-preview-link">
+                                            <span className="material-icons">open_in_new</span>
+                                            Buka di tab baru
+                                        </a>
                                     </div>
+                                </section>
 
-                                    {/* Size inputs for fixed */}
-                                    {embedSize === 'fixed' && (
-                                        <div className="embed-size-inputs">
-                                            <div className="embed-size-input">
-                                                <label>Width</label>
+                                {/* Embed Code */}
+                                <section className="share-card">
+                                    <div className="share-card__header">
+                                        <span className="material-icons share-card__icon">code</span>
+                                        <div>
+                                            <h3 className="share-card__title">Embed di Website</h3>
+                                            <p className="share-card__desc">Pasang virtual tour di website Anda dengan iframe</p>
+                                        </div>
+                                    </div>
+                                    <div className="share-card__content">
+                                        {/* Embed Options */}
+                                        <div className="embed-options">
+                                            <label className="embed-option">
                                                 <input
-                                                    type="text"
-                                                    value={embedWidth}
-                                                    onChange={(e) => setEmbedWidth(e.target.value)}
-                                                    placeholder="800"
+                                                    type="radio"
+                                                    name="embedSize"
+                                                    checked={embedSize === 'responsive'}
+                                                    onChange={() => setEmbedSize('responsive')}
                                                 />
+                                                <span className="embed-option__label">
+                                                    <span className="material-icons">aspect_ratio</span>
+                                                    Responsive (100% width)
+                                                </span>
+                                            </label>
+                                            <label className="embed-option">
+                                                <input
+                                                    type="radio"
+                                                    name="embedSize"
+                                                    checked={embedSize === 'fixed'}
+                                                    onChange={() => setEmbedSize('fixed')}
+                                                />
+                                                <span className="embed-option__label">
+                                                    <span className="material-icons">crop_free</span>
+                                                    Fixed Size
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {/* Size inputs for fixed */}
+                                        {embedSize === 'fixed' && (
+                                            <div className="embed-size-inputs">
+                                                <div className="embed-size-input">
+                                                    <label>Width</label>
+                                                    <input
+                                                        type="text"
+                                                        value={embedWidth}
+                                                        onChange={(e) => setEmbedWidth(e.target.value)}
+                                                        placeholder="800"
+                                                    />
+                                                </div>
+                                                <span className="embed-size-x">×</span>
+                                                <div className="embed-size-input">
+                                                    <label>Height</label>
+                                                    <input
+                                                        type="text"
+                                                        value={embedHeight}
+                                                        onChange={(e) => setEmbedHeight(e.target.value)}
+                                                        placeholder="500"
+                                                    />
+                                                </div>
                                             </div>
-                                            <span className="embed-size-x">×</span>
-                                            <div className="embed-size-input">
-                                                <label>Height</label>
+                                        )}
+
+                                        {/* Height for responsive */}
+                                        {embedSize === 'responsive' && (
+                                            <div className="embed-height-input">
+                                                <label>Height (px)</label>
                                                 <input
                                                     type="text"
                                                     value={embedHeight}
@@ -570,137 +593,128 @@ const EditTourPage: React.FC = () => {
                                                     placeholder="500"
                                                 />
                                             </div>
+                                        )}
+
+                                        {/* Embed Code */}
+                                        <div className="embed-code-wrapper">
+                                            <pre className="embed-code">{embedCode}</pre>
+                                            <button
+                                                onClick={() => copyToClipboard(embedCode, 'embed')}
+                                                className={`share-copy-btn share-copy-btn--code ${copied === 'embed' ? 'copied' : ''}`}
+                                            >
+                                                <span className="material-icons">
+                                                    {copied === 'embed' ? 'check' : 'content_copy'}
+                                                </span>
+                                                {copied === 'embed' ? 'Tersalin!' : 'Salin Kode'}
+                                            </button>
                                         </div>
-                                    )}
 
-                                    {/* Height for responsive */}
-                                    {embedSize === 'responsive' && (
-                                        <div className="embed-height-input">
-                                            <label>Height (px)</label>
-                                            <input
-                                                type="text"
-                                                value={embedHeight}
-                                                onChange={(e) => setEmbedHeight(e.target.value)}
-                                                placeholder="500"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Embed Code */}
-                                    <div className="embed-code-wrapper">
-                                        <pre className="embed-code">{embedCode}</pre>
-                                        <button
-                                            onClick={() => copyToClipboard(embedCode, 'embed')}
-                                            className={`share-copy-btn share-copy-btn--code ${copied === 'embed' ? 'copied' : ''}`}
-                                        >
-                                            <span className="material-icons">
-                                                {copied === 'embed' ? 'check' : 'content_copy'}
-                                            </span>
-                                            {copied === 'embed' ? 'Tersalin!' : 'Salin Kode'}
-                                        </button>
-                                    </div>
-
-                                    {/* Preview */}
-                                    <div className="embed-preview">
-                                        <h4 className="embed-preview__title">Preview</h4>
-                                        <div className="embed-preview__frame" style={{
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            background: '#f3f4f6',
-                                            padding: '1rem',
-                                            borderRadius: '8px',
-                                            overflow: 'auto',
-                                            minHeight: `${embedHeight}px`
-                                        }}>
-                                            {id && id !== 'new' ? (
-                                                <div
-                                                    className="portfolio-hero__preview"
-                                                    style={{
-                                                        position: 'relative',
-                                                        width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
-                                                        height: `${embedHeight}px`,
-                                                        maxWidth: '100%',
-                                                        borderRadius: '16px',
-                                                        overflow: 'hidden',
-                                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                                                        backgroundColor: '#f3f4f6'
-                                                    }}
-                                                >
+                                        {/* Preview */}
+                                        <div className="embed-preview">
+                                            <h4 className="embed-preview__title">Preview</h4>
+                                            <div className="embed-preview__frame" style={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                background: '#f3f4f6',
+                                                padding: '1rem',
+                                                borderRadius: '8px',
+                                                overflow: 'auto',
+                                                minHeight: `${embedHeight}px`
+                                            }}>
+                                                {id && id !== 'new' ? (
                                                     <div
-                                                        ref={previewContainerRef}
+                                                        className="portfolio-hero__preview"
                                                         style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            position: 'relative'
+                                                            position: 'relative',
+                                                            width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
+                                                            height: `${embedHeight}px`,
+                                                            maxWidth: '100%',
+                                                            borderRadius: '16px',
+                                                            overflow: 'hidden',
+                                                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                                            backgroundColor: '#f3f4f6'
                                                         }}
                                                     >
-                                                        <iframe
-                                                            src={id === 'demo' ? '/demo?embed=true' : `/tour/${id}?embed=true`}
+                                                        <div
+                                                            ref={previewContainerRef}
                                                             style={{
                                                                 width: '100%',
                                                                 height: '100%',
-                                                                border: 'none',
-                                                                backgroundColor: 'white'
+                                                                position: 'relative'
                                                             }}
-                                                            title="Tour Preview"
-                                                        />
+                                                        >
+                                                            <iframe
+                                                                src={id === 'demo' ? '/demo?embed=true' : `/tour/${id}?embed=true`}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    border: 'none',
+                                                                    backgroundColor: 'white'
+                                                                }}
+                                                                title="Tour Preview"
+                                                            />
+                                                        </div>
+
+                                                        {/* Portfolio Hero Style Overlay */}
+                                                        <div className="embed-preview__overlay"></div>
+
+
                                                     </div>
-
-                                                    {/* Portfolio Hero Style Overlay */}
-                                                    <div className="embed-preview__overlay"></div>
-
-
-                                                </div>
-                                            ) : (
-                                                <div style={{
-                                                    color: '#9ca3af',
-                                                    textAlign: 'center',
-                                                    padding: '2rem'
-                                                }}>
-                                                    <span className="material-icons" style={{ fontSize: '48px', marginBottom: '1rem', display: 'block' }}>preview</span>
-                                                    Simpan project terlebih dahulu untuk melihat preview
-                                                </div>
-                                            )}
+                                                ) : (
+                                                    <div style={{
+                                                        color: '#9ca3af',
+                                                        textAlign: 'center',
+                                                        padding: '2rem'
+                                                    }}>
+                                                        <span className="material-icons" style={{ fontSize: '48px', marginBottom: '1rem', display: 'block' }}>preview</span>
+                                                        Simpan project terlebih dahulu untuk melihat preview
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </section>
+                                </section>
 
-                            {/* QR Code - Coming Soon */}
-                            <section className="share-card share-card--coming-soon">
-                                <div className="share-card__header">
-                                    <span className="material-icons share-card__icon">qr_code_2</span>
-                                    <div>
-                                        <h3 className="share-card__title">QR Code</h3>
-                                        <p className="share-card__desc">Generate QR code untuk mempermudah akses via mobile</p>
+                                {/* QR Code - Coming Soon */}
+                                <section className="share-card share-card--coming-soon">
+                                    <div className="share-card__header">
+                                        <span className="material-icons share-card__icon">qr_code_2</span>
+                                        <div>
+                                            <h3 className="share-card__title">QR Code</h3>
+                                            <p className="share-card__desc">Generate QR code untuk mempermudah akses via mobile</p>
+                                        </div>
+                                        <span className="coming-soon-badge">Coming Soon</span>
                                     </div>
-                                    <span className="coming-soon-badge">Coming Soon</span>
-                                </div>
-                            </section>
-                        </div>
-                    )}
+                                </section>
+                            </div>
+                        )
+                    }
 
                     {/* Gallery Tab Placeholder */}
-                    {activeTab === 'gallery' && (
-                        <div className="placeholder-section">
-                            <span className="material-icons placeholder-icon">image</span>
-                            <h3>Galeri Foto</h3>
-                            <p>Upload dan kelola foto-foto properti di sini.</p>
-                        </div>
-                    )}
+                    {
+                        activeTab === 'gallery' && (
+                            <div className="placeholder-section">
+                                <span className="material-icons placeholder-icon">image</span>
+                                <h3>Galeri Foto</h3>
+                                <p>Upload dan kelola foto-foto properti di sini.</p>
+                            </div>
+                        )
+                    }
 
                     {/* Settings Tab Placeholder */}
-                    {activeTab === 'settings' && (
-                        <div className="placeholder-section">
-                            <span className="material-icons placeholder-icon">settings</span>
-                            <h3>Pengaturan</h3>
-                            <p>Konfigurasi lanjutan untuk tour Anda.</p>
-                        </div>
-                    )}
-                </div>
-            </main>
-        </div>
+                    {
+                        activeTab === 'settings' && (
+                            <div className="placeholder-section">
+                                <span className="material-icons placeholder-icon">settings</span>
+                                <h3>Pengaturan</h3>
+                                <p>Konfigurasi lanjutan untuk tour Anda.</p>
+                            </div>
+                        )
+                    }
+                </main >
+            </div >
+        </div >
     );
 };
 

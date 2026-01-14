@@ -34,9 +34,9 @@
     width: 100%;
     height: 100%;
     z-index: 1;
-    /* Performance: GPU acceleration for smooth pan/drag */
-    will-change: transform;
-    transform: translateZ(0);
+    /* Performance: GPU acceleration removed to avoid coordinate mapping issues */
+    /* will-change: transform; */
+    /* transform: translateZ(0); */
     backface-visibility: hidden;
     /* Isolate for better compositing */
     contain: strict;
@@ -44,6 +44,16 @@
 
 .vt-editor__viewer--add-mode {
     cursor: crosshair;
+}
+
+/* 
+   In Add Mode, disable interaction with existing hotspots 
+   so clicks pass through to the viewer background for placement.
+*/
+.vt-editor__viewer--add-mode .pnlm-hotspot,
+.vt-editor__viewer--add-mode .custom-hotspot,
+.vt-editor__viewer--add-mode .pnlm-hotspot-base {
+    pointer-events: none !important;
 }
 
 /* ----------------------------------------
@@ -770,6 +780,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 
 /* ----------------------------------------
    8. Premium Panel Styling (New)

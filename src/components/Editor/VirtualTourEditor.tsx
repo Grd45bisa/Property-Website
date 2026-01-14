@@ -373,6 +373,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             id: hs.id,
             pitch: hs.pitch,
             yaw: hs.yaw,
+            // Add scale/opacity here so JSON.stringify detects changes in useEffect
+
+            opacity: hs.opacity,
             type: 'custom',
             scale: hs.icon === 'blur', // Enable zoom scaling for blur (so it stays attached to object), disable for icons (so they stay readable)
             // Include scale and renderMode for change detection (JSON.stringify comparison)
@@ -541,6 +544,23 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             }
         };
     }, [activeSceneId, activeScene?.imageUrl]);
+
+    // Ensure viewer resizes correctly when window size changes or panels toggle
+    useEffect(() => {
+        const handleResize = () => {
+            if (pannellumInstance.current) {
+                pannellumInstance.current.resize();
+            }
+        };
+        window.addEventListener('resize', handleResize);
+
+        // Also force resize when Add Mode activates (just in case)
+        if (isAddMode && pannellumInstance.current) {
+            setTimeout(() => pannellumInstance.current.resize(), 100);
+        }
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isAddMode]);
 
     // 3. Sync Hotspots & Mode
     useEffect(() => {
@@ -1263,8 +1283,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 </div>
             )}
 
-            {/* 1. Base Viewer Layer */}
+            {/* 1. 360 Viewer Container */}
             <div
+                id="pannellum-viewer"
                 ref={viewerRef}
                 className={`vt-editor__viewer ${isAddMode ? 'vt-editor__viewer--add-mode' : ''}`}
             >
@@ -1272,7 +1293,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 {!isPreviewMode && <div className="vt-editor__crosshair" />}
             </div>
 
-            {/* 2. Top Bar (Not Visible in Preview) or Exit Button (Visible in Preview) */}
+            {/* 2. Top Bar */}
             {!isPreviewMode ? (
                 <div className="vt-editor__top-bar">
                     <div className="vt-editor__title">
@@ -1665,13 +1686,26 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                             )}
                         </div>
 
+
                         {/* SECTION: APPEARANCE */}
                         <div className="vt-editor__section">
                             <div className="vt-editor__section-header">
                                 <span className="material-icons">palette</span> Appearance
                             </div>
 
-                            {/* Scale Slider */}
+                            {/* Info Type Selection for Info Hotspots */}
+                            {selectedHotspot.icon === 'info' && (
+                                <div className="vt-editor__form-group">
+                                    <label>Interaction Type</label>
+                                    <select
+                                        value={selectedHotspot.interactionMode || 'popup'}
+                                        onChange={(e) => updateHotspot(selectedHotspot.id, { interactionMode: e.target.value as 'popup' | 'label' })}
+                                    >
+                                        <option value="popup">Popup Box (Modal)</option>
+                                        <option value="label">Label Only (Tooltip)</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="vt-editor__form-group">
                                 <label style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Size / Scale</span>
@@ -1913,8 +1947,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                 Remove Hotspot
                             </div>
                         </button>
-                    </div>
-                </div>
+                    </div >
+                </div >
             )
             }
 

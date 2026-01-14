@@ -141,18 +141,25 @@
     padding: var(--spacing-6);
     background: var(--color-gray-50);
     overflow-y: auto;
+    /* Restored auto to allow scrolling for Info/Share tabs */
     min-width: 0;
     min-height: 0;
+    display: flex;
+    /* Added flex to allow children to expand */
+    flex-direction: column;
 }
 
-.editor-content--full {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
+/* Removed editor-content--full as it's no longer used/needed per user request */
+
+.editor-canvas-card {
+    flex: 1;
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-gray-200);
     overflow: hidden;
-    min-height: 0;
-    /* Fixed height for 360 mode */
-    height: 100%;
+    /* Ensures the editor doesn't spill out of corners */
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Header */
