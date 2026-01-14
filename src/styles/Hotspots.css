@@ -32,8 +32,8 @@
     --hs-rotate-x: 0deg;
     --hs-rotate-y: 0deg;
     --hs-rotate-z: 0deg;
-    --hs-rotate-z: 0deg;
     --hs-aspect-ratio: 1;
+    --hs-scale-y: 1;
     --hs-border-radius: 50%;
 
     /* IMPORTANT: Do NOT apply transform here as it overrides Pannellum's positioning */
@@ -51,7 +51,7 @@
     transition: transform 0.15s ease;
 
     transform-origin: center center;
-    transform: scale(var(--hs-scale)) scaleX(var(--hs-aspect-ratio)) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
+    transform: scale(var(--hs-scale)) scaleX(var(--hs-aspect-ratio)) scaleY(var(--hs-scale-y)) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
     opacity: var(--hs-opacity);
     transform-style: preserve-3d;
 }
@@ -59,7 +59,7 @@
 .custom-hotspot:hover .hotspot-inner {
     /* Preserve custom scale and rotation on hover, add 15% extra scale */
     --hs-hover-boost: 1.15;
-    transform: scale(calc(var(--hs-scale) * var(--hs-hover-boost))) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
+    transform: scale(calc(var(--hs-scale) * var(--hs-hover-boost))) scaleX(var(--hs-aspect-ratio)) scaleY(var(--hs-scale-y)) rotateX(var(--hs-rotate-x)) rotateY(var(--hs-rotate-y)) rotateZ(var(--hs-rotate-z));
 }
 
 /* Apply visuals to the inner wrapper so they rotate */
@@ -154,9 +154,16 @@
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
 
-.custom-hotspot--blur,
-.custom-hotspot--blur:hover,
-.custom-hotspot--blur * {
+.custom-hotspot--blur {
+    /* Default: Pass through clicks (Tour Page & Preview Mode) */
     pointer-events: none !important;
     cursor: default !important;
+}
+
+/* Allow interaction when editing */
+.custom-hotspot--blur.custom-hotspot--editable {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    border-color: rgba(255, 255, 255, 0.8);
+    /* Make border more visible in edit mode */
 }

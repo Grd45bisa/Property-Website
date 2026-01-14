@@ -2,12 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import './VirtualTourEditor.css';
 import '../../styles/Hotspots.css';
+import type { Database } from '../../types/database.types';
 
 declare global {
     interface Window {
         pannellum: any;
     }
 }
+
+type HotspotRow = Database['public']['Tables']['hotspots']['Row'];
+type HotspotInsert = Database['public']['Tables']['hotspots']['Insert'];
 
 interface Scene {
     id: string;
@@ -16,6 +20,7 @@ interface Scene {
     thumbnailUrl?: string; // Blur placeholder for progressive loading
     hotspots: Hotspot[];
     sequence_order?: number;
+    initialView?: { pitch: number; yaw: number };
 }
 
 type HotspotIcon = 'info' | 'door' | 'arrow' | 'nav_arrow' | 'blur';
@@ -79,6 +84,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
     const [scenes, setScenes] = useState<Scene[]>([]);
+    const [deletedSceneIds, setDeletedSceneIds] = useState<string[]>([]);
 
     // Nadir State
     const [nadirUrl, setNadirUrl] = useState<string | null>(null);
@@ -142,6 +148,20 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             return 'floor';
         }
         return '2d'; // Default to 2D (billboard) as requested
+    };
+
+    const handleSetInitialView = () => {
+        if (!pannellumInstance.current) return;
+        const pitch = pannellumInstance.current.getPitch();
+        const yaw = pannellumInstance.current.getYaw();
+
+        setScenes(prev => prev.map(s => {
+            if (s.id === activeSceneId) {
+                return { ...s, initialView: { pitch, yaw } };
+            }
+            return s;
+        }));
+        showToast('Sudut pandang awal disimpan!');
     };
 
     const addNewHotspot = (pitch: number, yaw: number, icon: HotspotIcon) => {
@@ -273,21 +293,28 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             if (roomsError) throw roomsError;
 
             // Fetch Hotspots
-            const { data: hotspots, error: hotspotsError } = await supabase
+            const { data: hotspotsData, error: hotspotsError } = await supabase
                 .from('hotspots')
                 .select('*')
                 .in('room_id', rooms?.map(r => r.id) || []);
 
             if (hotspotsError) throw hotspotsError;
 
+            // Cast to typed array
+            const hotspots = hotspotsData as HotspotRow[];
+
             // Map to State
             const mappedScenes: Scene[] = (rooms || []).map(room => ({
                 id: room.id,
                 name: room.name,
                 imageUrl: room.image_url,
-                thumbnailUrl: room.thumbnail_url || undefined, // Blur placeholder
+                thumbnailUrl: room.thumbnail_url || undefined,
                 sequence_order: room.sequence_order || 0,
-                hotspots: (hotspots || [])
+                initialView: {
+                    pitch: room.initial_view_pitch ?? 0,
+                    yaw: room.initial_view_yaw ?? 0
+                },
+                hotspots: hotspots
                     .filter(h => h.room_id === room.id)
                     .map(h => ({
                         id: h.id,
@@ -295,18 +322,18 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         pitch: h.pitch,
                         yaw: h.yaw,
                         text: h.text || '',
-                        targetSceneId: h.target_room_id,
-                        description: '',
-                        scale: h.scale,
-                        opacity: h.opacity,
-                        renderMode: h.render_mode as '2d' | 'floor' | 'wall',
-                        rotateX: h.rotate_x,
-                        rotateZ: h.rotate_z,
-                        rotateY: h.rotate_y,
-                        aspectRatio: h.aspect_ratio,
-                        scaleY: h.scale_y,
-                        blurShape: h.blur_shape as 'circle' | 'rect',
-                        interactionMode: h.interaction_mode as 'popup' | 'label'
+                        targetSceneId: h.target_room_id || undefined,
+                        description: h.description || '',
+                        scale: h.scale ?? 1,
+                        opacity: h.opacity ?? 1,
+                        renderMode: (h.render_mode as '2d' | 'floor' | 'wall') || '2d',
+                        rotateX: h.rotate_x ?? 0,
+                        rotateZ: h.rotate_z ?? 0,
+                        rotateY: h.rotate_y ?? 0,
+                        aspectRatio: h.aspect_ratio ?? 1,
+                        scaleY: h.scale_y ?? 1,
+                        blurShape: (h.blur_shape as 'circle' | 'rect') || 'circle',
+                        interactionMode: (h.interaction_mode as 'popup' | 'label') || 'popup'
                     }))
             }));
 
@@ -397,7 +424,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 // Apply floor rotation via CSS variable (dynamic or default)
                 if (hs.renderMode === 'floor') {
                     const tilt = hs.rotateX ?? 75;
+                    const spin = hs.rotateZ ?? 0;
                     hotSpotDiv.style.setProperty('--hs-rotate-x', `${tilt}deg`);
+                    hotSpotDiv.style.setProperty('--hs-rotate-z', `${spin}deg`);
                 }
 
                 // Apply wall rotation (Z) via CSS variable
@@ -473,8 +502,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 showControls: !isPreviewMode,
                 showFullscreenCtrl: false,
                 hotSpots: [], // Start empty, let Sync Effect handle it to ensure consistency
-                pitch: 0,
-                yaw: 0,
+                pitch: activeScene.initialView?.pitch ?? 0,
+                yaw: activeScene.initialView?.yaw ?? 0,
                 hfov: 100,
                 minPitch: minPitch, // Apply pitch limit
                 maxPitch: 90
@@ -815,6 +844,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 image_url: s.imageUrl,
                 thumbnail_url: s.thumbnailUrl || null, // Blur placeholder
                 sequence_order: index, // Save current order
+                initial_view_pitch: s.initialView?.pitch ?? 0,
+                initial_view_yaw: s.initialView?.yaw ?? 0,
                 created_at: new Date().toISOString()
             }));
 
@@ -824,6 +855,18 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
 
             if (roomsError) throw roomsError;
 
+            // 1.5. Process Deleted Rooms
+            if (deletedSceneIds.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('rooms')
+                    .delete()
+                    .in('id', deletedSceneIds);
+
+                if (deleteError) throw deleteError;
+                // Clear the list after successful delete
+                setDeletedSceneIds([]);
+            }
+
             // 2. Sync Hotspots
             // Delete existing hotspots for these rooms and re-insert (easiest way to handle deletions)
             // Or upsert. But deletions are hard.
@@ -831,7 +874,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             // Warning: This is destructive but simple for "Save All" logic.
 
             // Collect all hotspot objects
-            let allHotspots: any[] = [];
+            let allHotspots: HotspotInsert[] = [];
             scenes.forEach(s => {
                 s.hotspots.forEach(h => {
                     allHotspots.push({
@@ -843,15 +886,15 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         text: h.text,
                         icon: h.icon,
                         target_room_id: h.targetSceneId || null,
-                        scale: h.scale || 1.0,
-                        opacity: h.opacity !== undefined ? h.opacity : 1.0,
+                        scale: h.scale ?? 1.0,
+                        opacity: h.opacity ?? 1.0,
                         render_mode: h.renderMode || '2d',
-                        rotate_x: h.rotateX,
-                        rotate_z: h.rotateZ,
-                        rotate_y: h.rotateY,
-                        aspect_ratio: h.aspectRatio,
-                        scale_y: h.scaleY,
-                        blur_shape: h.blurShape,
+                        rotate_x: h.rotateX ?? 0,
+                        rotate_z: h.rotateZ ?? 0,
+                        rotate_y: h.rotateY ?? 0,
+                        aspect_ratio: h.aspectRatio ?? 1,
+                        scale_y: h.scaleY ?? 1,
+                        blur_shape: h.blurShape || 'circle',
                         interaction_mode: h.interactionMode || 'popup'
                     });
                 });
@@ -886,7 +929,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     };
 
     // Check if hotspot is navigation type
-    const isNavigationIcon = (icon: HotspotIcon) => icon === 'door' || icon === 'arrow';
+
 
     // --- COMPRESSION TOOL FUNCTIONS ---
 
@@ -1224,7 +1267,10 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             <div
                 ref={viewerRef}
                 className={`vt-editor__viewer ${isAddMode ? 'vt-editor__viewer--add-mode' : ''}`}
-            />
+            >
+                {/* Crosshair Overlay (Only in Edit Mode) */}
+                {!isPreviewMode && <div className="vt-editor__crosshair" />}
+            </div>
 
             {/* 2. Top Bar (Not Visible in Preview) or Exit Button (Visible in Preview) */}
             {!isPreviewMode ? (
@@ -1352,6 +1398,13 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         data-tooltip="Batas Pandang Bawah"
                     >
                         <span className="material-icons">vertical_align_bottom</span>
+                    </button>
+                    <button
+                        className="vt-editor__tool-btn"
+                        onClick={handleSetInitialView}
+                        data-tooltip="Set Pandangan Awal"
+                    >
+                        <span className="material-icons">center_focus_strong</span>
                     </button>
                 </div>
             )}
@@ -1589,7 +1642,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                             )}
 
                             {/* Target Scene (Nav Only) */}
-                            {isNavigationIcon(selectedHotspot.icon) && (
+                            {['door', 'arrow', 'nav_arrow'].includes(selectedHotspot.icon) && (
                                 <div className="vt-editor__form-group">
                                     <label>Target Destination</label>
                                     <select
@@ -1825,8 +1878,8 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                         <div className="vt-editor__range-wrapper">
                                             <input
                                                 type="range"
-                                                min="-45"
-                                                max="45"
+                                                min="-180"
+                                                max="180"
                                                 step="5"
                                                 className="vt-editor__range"
                                                 value={selectedHotspot.rotateZ ?? 0}
@@ -1902,6 +1955,19 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                     }}
                                 >
                                     <img src={scene.imageUrl} alt={scene.name} />
+
+                                    {/* Sequence Number Badge */}
+                                    <div className="vt-editor__scene-badge">
+                                        {scenes.indexOf(scene) + 1}
+                                    </div>
+
+                                    {/* Start Scene Indicator */}
+                                    {scenes.indexOf(scene) === 0 && (
+                                        <div className="vt-editor__scene-start" title="Start Scene">
+                                            <span className="material-icons" style={{ fontSize: '12px' }}>home</span>
+                                        </div>
+                                    )}
+
                                     <div className="vt-editor__scene-name">{scene.name}</div>
 
                                     {/* Delete Button Overlay */}
@@ -1913,6 +1979,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                                 const newScenes = scenes.filter(s => s.id !== scene.id);
                                                 // Handle delete from Supabase if needed, or wait for save
                                                 setScenes(newScenes);
+                                                setDeletedSceneIds(prev => [...prev, scene.id]);
                                                 if (activeSceneId === scene.id) {
                                                     setActiveSceneId(newScenes[0]?.id || '');
                                                 }

@@ -10,15 +10,6 @@ declare global {
         pannellum: any;
     }
 }
-
-interface Room {
-    id: string;
-    name: string;
-    image: string;
-    thumbnail?: string; // Blur placeholder for instant loading
-    hotSpots: HotSpot[];
-}
-
 interface HotSpot {
     id?: string;
     pitch: number;
@@ -29,7 +20,6 @@ interface HotSpot {
     icon?: 'arrow' | 'door' | 'info' | 'nav_arrow' | 'blur';
     scale?: number;
     renderMode?: 'floor' | 'wall' | '2d';
-
     opacity?: number;
     rotateX?: number;
     rotateZ?: number;
@@ -38,6 +28,15 @@ interface HotSpot {
     scaleY?: number;
     blurShape?: 'circle' | 'rect';
     interactionMode?: 'popup' | 'label';
+}
+
+interface Room {
+    id: string;
+    name: string;
+    image: string;
+    thumbnail?: string; // Blur placeholder for instant loading
+    hotSpots: HotSpot[];
+    initialView?: { pitch: number; yaw: number };
 }
 
 const TourPage: React.FC = () => {
@@ -70,9 +69,15 @@ const TourPage: React.FC = () => {
     const [minPitch, setMinPitch] = useState<number>(-90); // Pitch limit from tour settings
 
     // Client Branding
+    // Client Branding
     const [clientName, setClientName] = useState<string>('');
     const [clientLogo, setClientLogo] = useState<string>('');
     const [clientUrl, setClientUrl] = useState<string>('');
+    const [agentWhatsapp, setAgentWhatsapp] = useState<string>('');
+
+    // Mobile & Gyro State
+    const [isMobile, setIsMobile] = useState(false);
+    const [isGyroEnabled, setIsGyroEnabled] = useState(false);
 
     // Get current room data
     useEffect(() => {
@@ -84,7 +89,7 @@ const TourPage: React.FC = () => {
                 // 1. Fetch Tour Info
                 const { data: tourData, error: tourError } = await supabase
                     .from('tours')
-                    .select('title, nadir_image_url, nadir_enabled, min_pitch, client_name, client_logo, client_url')
+                    .select('title, nadir_image_url, nadir_enabled, min_pitch, client_name, client_logo, client_url, agent_whatsapp')
                     .eq('id', id)
                     .single();
 
@@ -97,6 +102,7 @@ const TourPage: React.FC = () => {
                     setClientName(tourData.client_name || '');
                     setClientLogo(tourData.client_logo || '');
                     setClientUrl(tourData.client_url || '');
+                    setAgentWhatsapp(tourData.agent_whatsapp || '');
                 }
 
                 // 2. Fetch Rooms
@@ -104,6 +110,7 @@ const TourPage: React.FC = () => {
                     .from('rooms')
                     .select('*')
                     .eq('tour_id', id)
+                    .order('sequence_order', { ascending: true, nullsFirst: false })
                     .order('created_at', { ascending: true });
 
                 if (roomsError) throw roomsError;
@@ -127,6 +134,10 @@ const TourPage: React.FC = () => {
                     name: room.name,
                     image: room.image_url,
                     thumbnail: room.thumbnail_url || undefined, // Blur placeholder
+                    initialView: {
+                        pitch: room.initial_view_pitch ?? 0,
+                        yaw: room.initial_view_yaw ?? 0
+                    },
                     hotSpots: (hotspotsData || [])
                         .filter(h => h.room_id === room.id)
                         .map(h => ({
@@ -162,6 +173,23 @@ const TourPage: React.FC = () => {
 
         fetchTourData();
     }, [id]);
+
+    // Check device type
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            // Basic mobile check
+            if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent) || (window.innerWidth < 1024 && isTouch)) {
+                setIsMobile(true);
+            } else {
+                setIsMobile(false);
+            }
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Preload all room images in background for instant scene switching
     useEffect(() => {
@@ -205,7 +233,8 @@ const TourPage: React.FC = () => {
                 // Determine CSS class based on type and render mode
                 cssClass: (() => {
                     const baseClass = 'custom-hotspot';
-                    let typeClass = hs.type === 'scene' ? 'custom-hotspot--scene' : 'custom-hotspot--info';
+                    const isNavHotspot = hs.type === 'scene' || hs.icon === 'door' || hs.icon === 'arrow' || hs.icon === 'nav_arrow';
+                    let typeClass = isNavHotspot ? 'custom-hotspot--scene' : 'custom-hotspot--info';
                     if (hs.icon === 'blur') typeClass = 'custom-hotspot--blur';
 
                     const renderClass = hs.renderMode === 'floor' ? 'custom-hotspot--floor'
@@ -240,7 +269,9 @@ const TourPage: React.FC = () => {
                     // Apply floor rotation via CSS variable (dynamic or default)
                     if (hs.renderMode === 'floor') {
                         const tilt = hs.rotateX ?? 75;
+                        const spin = hs.rotateZ ?? 0;
                         hotSpotDiv.style.setProperty('--hs-rotate-x', `${tilt}deg`);
+                        hotSpotDiv.style.setProperty('--hs-rotate-z', `${spin}deg`);
                     }
 
                     // Apply wall rotation (Z) via CSS variable
@@ -297,7 +328,8 @@ const TourPage: React.FC = () => {
                 clickHandlerFunc: () => {
                     if (hs.icon === 'blur') return; // Disable click for blur
 
-                    if (hs.type === 'scene' && hs.targetRoomId) {
+                    const isNavHotspot = hs.type === 'scene' || hs.icon === 'door' || hs.icon === 'arrow' || hs.icon === 'nav_arrow';
+                    if (isNavHotspot && hs.targetRoomId) {
                         // Save current viewing direction before transitioning
                         if (pannellumInstance.current) {
                             savedViewDirection.current = {
@@ -325,6 +357,7 @@ const TourPage: React.FC = () => {
                     pitch: -90,
                     yaw: 0,
                     type: 'custom',
+                    scale: true, // Scale with zoom so it sticks to the floor
                     //@ts-ignore
                     cssClass: 'pnlm-nadir-cap',
                     createTooltipFunc: (div: HTMLElement) => {
@@ -408,7 +441,6 @@ const TourPage: React.FC = () => {
                     lastObjectUrl.current = null;
                 }
 
-                // DISABLED blur placeholder - setPanorama not supported in single-panorama mode
                 // Always use full quality image
                 const initialImage = currentRoom.image;
 
@@ -418,18 +450,14 @@ const TourPage: React.FC = () => {
                 }
 
                 // Determine initial viewing direction
-                // Use saved direction if transitioning, otherwise intro animation or default
-                let initialPitch = 0;
-                let initialYaw = 0;
+                let initialPitch = currentRoom.initialView?.pitch ?? 0;
+                let initialYaw = currentRoom.initialView?.yaw ?? 0;
                 let initialHfov = 100;
 
-                if (savedViewDirection.current && hasPlayedIntro.current) {
-                    // Transitioning between scenes - keep same direction
-                    initialPitch = savedViewDirection.current.pitch;
-                    initialYaw = savedViewDirection.current.yaw;
-                } else if (!hasPlayedIntro.current) {
+                if (!hasPlayedIntro.current) {
                     // First load - tiny planet intro
                     initialPitch = -90;
+                    initialYaw = currentRoom.initialView?.yaw ?? 0;
                     initialHfov = 150;
                 }
 
@@ -444,12 +472,12 @@ const TourPage: React.FC = () => {
                     pitch: initialPitch,
                     yaw: initialYaw,
                     hfov: initialHfov,
-                    minPitch: minPitch, // Apply pitch limit from settings
+                    minPitch: minPitch,
                     maxPitch: 90,
                     mouseZoom: true,
                     draggable: true,
                     friction: 0.15,
-                    autoRotate: -0.3, // Negative = rotate right
+                    autoRotate: -0.3,
                     hotSpots: hotSpots,
                     preview: undefined
                 });
@@ -462,11 +490,21 @@ const TourPage: React.FC = () => {
                     setIsLoading(false);
                     setIsTransitioning(false);
 
+                    // Re-enable Gyro if it was active
+                    if (isGyroEnabled && pannellumInstance.current) {
+                        pannellumInstance.current.startOrientation();
+                    }
+
                     // Play intro animation if first load
                     if (!hasPlayedIntro.current) {
                         setTimeout(() => {
                             if (pannellumInstance.current) {
-                                pannellumInstance.current.lookAt(0, 0, 100, 3000);
+                                pannellumInstance.current.lookAt(
+                                    currentRoom.initialView?.pitch ?? 0,
+                                    currentRoom.initialView?.yaw ?? 0,
+                                    100,
+                                    3000
+                                );
                             }
                         }, 500);
                         hasPlayedIntro.current = true;
@@ -484,9 +522,6 @@ const TourPage: React.FC = () => {
                     setIsTransitioning(false);
                 });
 
-                // Note: setPanorama is not available in single panorama mode
-                // Just preload/process image for memory optimization (for future scene switches)
-                // The viewer already has the correct image loaded via the 'panorama' option
                 if (!currentRoom.thumbnail) {
                     // Preprocess and cache resized image for memory management
                     loadAndResizeImage(currentRoom.image).then((processedImage) => {
@@ -613,6 +648,43 @@ const TourPage: React.FC = () => {
 
     if (!currentRoom) return <div className="demo-page" />;
 
+
+
+    const handleGyroToggle = () => {
+        if (!pannellumInstance.current) return;
+
+        if (!isGyroEnabled) {
+            // Enable Gyro
+            // iOS 13+ requires permission request
+            if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+                (DeviceOrientationEvent as any).requestPermission()
+                    .then((permissionState: string) => {
+                        if (permissionState === 'granted') {
+                            pannellumInstance.current.startOrientation();
+                            setIsGyroEnabled(true);
+                            // Initial listener to force update if needed, though Pannellum handles it
+                        } else {
+                            alert('Izin akses Gyroscope ditolak.');
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS 13+ devices
+                pannellumInstance.current.startOrientation();
+                setIsGyroEnabled(true);
+            }
+        } else {
+            // Disable Gyro
+            pannellumInstance.current.stopOrientation();
+            // Reset to initial pitch/yaw? Or keep current view?
+            // Usually stopping leaves it where it is.
+            setIsGyroEnabled(false);
+        }
+    };
+
+    // Controls Render
+    // ...
+
     return (
         <div ref={containerRef} className={`demo-page ${isMaximized ? 'demo-page--maximized' : ''}`}>
             {/* Viewer */}
@@ -716,18 +788,61 @@ const TourPage: React.FC = () => {
                 </>
             )}
 
-            {/* Controls */}
+            {/* Controls (Zoom Only on Left) */}
             <div className="demo-page__controls">
-                <button onClick={handleZoomIn} className="demo-page__control-btn"><span className="material-icons demo-page__control-icon">add</span></button>
-                <button onClick={handleZoomOut} className="demo-page__control-btn"><span className="material-icons demo-page__control-icon">remove</span></button>
-                <button
-                    onClick={handleFullscreen}
-                    className={`demo-page__control-btn ${isMaximized ? 'active' : ''}`}
-                    title={isMaximized ? "Keluar Mode Penuh" : "Mode Layar Penuh"}
-                >
-                    <span className="material-icons demo-page__control-icon">{isMaximized ? 'fullscreen_exit' : 'fullscreen'}</span>
-                </button>
+                <button onClick={handleZoomIn} className="demo-page__control-btn" title="Zoom In"><span className="material-icons demo-page__control-icon">add</span></button>
+                <button onClick={handleZoomOut} className="demo-page__control-btn" title="Zoom Out"><span className="material-icons demo-page__control-icon">remove</span></button>
+
+                {/* Gyro Toggle (Mobile Only) */}
+                {isMobile && (
+                    <button
+                        className={`demo-page__control-btn ${isGyroEnabled ? 'active' : ''}`}
+                        onClick={handleGyroToggle}
+                        title={isGyroEnabled ? "Matikan Gyroscope" : "Hidupkan Gyroscope"}
+                        style={{
+                            marginTop: '8px',
+                            backgroundColor: isGyroEnabled ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                            boxShadow: isGyroEnabled ? '0 0 10px rgba(255,255,255,0.3)' : undefined
+                        }}
+                    >
+                        <span className="material-icons demo-page__control-icon">
+                            {isGyroEnabled ? 'explore' : 'explore_off'}
+                        </span>
+                    </button>
+                )}
             </div>
+
+            {/* Bottom Right Controls */}
+
+            {/* Fullscreen Button */}
+            <button
+                onClick={handleFullscreen}
+                className={`demo-page__fullscreen-btn ${isMaximized ? 'active' : ''}`}
+                title={isMaximized ? "Keluar Mode Penuh" : "Mode Layar Penuh"}
+            >
+                <span className="material-icons">{isMaximized ? 'fullscreen_exit' : 'fullscreen'}</span>
+            </button>
+
+            {/* WhatsApp Button */}
+            {agentWhatsapp && (
+                <a
+                    href={`https://wa.me/${agentWhatsapp.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="demo-page__whatsapp"
+                    title="Hubungi Kami"
+                >
+                    <span className="demo-page__whatsapp-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <g fill="none">
+                                <path d="M24 0v24H0V0zM12.593 23.258l-.011.002-.071.035-.02.004-.014-.004-.071-.035q-.016-.005-.024.005l-.004.01-.017.428.005.02.01.013.104.074.015.004.012-.004.104-.074.012-.016.004-.017-.017-.427q-.004-.016-.017-.018m.265-.113-.013.002-.185.093-.01.01-.003.011.018.43.005.012.008.007.201.093q.019.005.029-.008l.004-.014-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014-.034.614q.001.018.017.024l.015-.002.201-.093.01-.008.004-.011.017-.43-.003-.012-.01-.01z" />
+                                <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.863-1.26l-.305-.178-3.032.892a1.01 1.01 0 0 1-1.28-1.145l.026-.109.892-3.032A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.759 12.282c.198.312.283.696.216 1.077l-.039.163-.441 1.501 1.501-.441c.433-.128.883-.05 1.24.177A8 8 0 1 0 12 4M9.102 7.184a.7.7 0 0 1 .684.075c.504.368.904.862 1.248 1.344l.327.474.153.225a.71.71 0 0 1-.046.864l-.075.076-.924.686a.23.23 0 0 0-.067.291c.21.38.581.947 1.007 1.373.427.426 1.02.822 1.426 1.055.088.05.194.034.266-.031l.038-.045.601-.915a.71.71 0 0 1 .973-.158l.543.379c.54.385 1.059.799 1.47 1.324a.7.7 0 0 1 .089.703c-.396.924-1.399 1.711-2.441 1.673l-.159-.01-.191-.018-.108-.014-.238-.04c-.924-.174-2.405-.698-3.94-2.232-1.534-1.535-2.058-3.016-2.232-3.94l-.04-.238-.025-.208-.013-.175-.004-.075c-.038-1.044.753-2.047 1.678-2.443" fill="currentColor" />
+                            </g>
+                        </svg>
+                    </span>
+                    <span className="demo-page__whatsapp-text">Hubungi Kami</span>
+                </a>
+            )}
 
             {/* Back Button - Hide if Embed */}
 

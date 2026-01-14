@@ -322,6 +322,50 @@
     transform: scale(1.1);
 }
 
+/* --------------- New Scene Badges --------------- */
+.vt-editor__scene-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vt-editor__scene-start {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    /* Replaces the number badge for index 0 if needed, or placed next to it */
+    left: 28px;
+    /* Offset if badge is there, or adjust flex */
+    background: #10b981;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.vt-editor__scene-card .vt-editor__scene-start {
+    left: auto;
+    right: 4px;
+    top: auto;
+    bottom: 24px;
+    /* Above name label */
+}
+
+/* ---------------------------------------------- */
+
 .vt-editor__scene-card img {
     width: 100%;
     height: 100%;
@@ -794,4 +838,39 @@
     color: white;
     text-align: right;
     font-family: monospace;
+}
+
+/* Crosshair for setting initial view */
+.vt-editor__crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.6;
+}
+
+.vt-editor__crosshair::before,
+.vt-editor__crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+.vt-editor__crosshair::before {
+    top: 9px;
+    left: 0;
+    width: 20px;
+    height: 2px;
+}
+
+.vt-editor__crosshair::after {
+    top: 0;
+    left: 9px;
+    width: 2px;
+    height: 20px;
 }

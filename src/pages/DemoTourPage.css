@@ -6,6 +6,8 @@
     position: relative;
     width: 100%;
     height: 100vh;
+    height: 100dvh;
+    /* Use dynamic viewport height for mobile browsers */
     background-color: var(--color-black);
     font-family: var(--font-family-sans);
     overflow: hidden;
@@ -226,8 +228,8 @@
 .demo-page__fullscreen-btn {
     position: absolute;
     right: var(--spacing-4);
-    bottom: 90px;
-    /* Positioned above WhatsApp button */
+    bottom: calc(90px + env(safe-area-inset-bottom, 20px) + 80px);
+    /* Positioned above WhatsApp button, adjusted for mobile lift */
     z-index: 20;
     width: 40px;
     height: 40px;
@@ -240,6 +242,7 @@
     justify-content: center;
     cursor: pointer;
     transition: background-color var(--transition-fast);
+    color: #ffffff;
 }
 
 .demo-page__fullscreen-btn:hover {
@@ -250,48 +253,71 @@
 .demo-page__whatsapp {
     position: absolute;
     right: var(--spacing-4);
-    bottom: var(--spacing-4);
+    bottom: calc(var(--spacing-4) + env(safe-area-inset-bottom, 20px) + 80px);
+    /* Lift up to avoid mobile browser chrome/nav bars */
     z-index: 20;
     display: flex;
     align-items: center;
-    gap: var(--spacing-2);
-    background-color: var(--color-primary);
+    background-color: #25D366;
+    /* WhatsApp Green */
     color: var(--color-white);
-    padding: var(--spacing-3) var(--spacing-4);
-    border-radius: var(--radius-full);
-    box-shadow: var(--shadow-lg);
+    border-radius: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     text-decoration: none;
-    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    height: 48px;
+    width: 48px;
+    /* Start as circle */
+    white-space: nowrap;
 }
 
 .demo-page__whatsapp:hover {
-    background-color: var(--color-primary-dark);
-    transform: scale(1.05);
-    color: var(--color-white);
+    background-color: #128C7E;
+    width: 152px;
+    /* Expand on hover */
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .demo-page__whatsapp-icon {
-    font-size: 20px;
+    font-size: 24px;
+    min-width: 48px;
+    /* Ensure icon takes full width of circle state */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.4s ease;
+}
+
+.demo-page__whatsapp:hover .demo-page__whatsapp-icon {
+    transform: rotate(-10deg);
 }
 
 .demo-page__whatsapp-text {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-bold);
-    display: none;
+    font-size: 14px;
+    font-weight: 600;
+    height: 14px;
+    line-height: 14px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+    /* Delay text slightly */
 }
 
-@media (min-width: 640px) {
-    .demo-page__whatsapp-text {
-        display: inline;
-    }
+.demo-page__whatsapp:hover .demo-page__whatsapp-text {
+    opacity: 1;
+    transform: translateX(0);
 }
+
+
 
 /* Back Button - at bottom left */
 
 /* Room Selector - Collapsible */
 .demo-page__room-selector {
     position: absolute;
-    bottom: var(--spacing-4);
+    bottom: calc(var(--spacing-4) + env(safe-area-inset-bottom, 20px) + 20px);
+    /* Lift up room toggle on mobile */
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
@@ -548,6 +574,54 @@
 }
 
 .demo-page__control-btn.active {
-    background-color: var(--color-primary) !important;
-    color: white !important;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+/* ========================================
+   Desktop Responsiveness (min-width: 635px)
+   ======================================== */
+@media (min-width: 635px) {
+
+    /* Reset WhatsApp position */
+    .demo-page__whatsapp {
+        bottom: 32px;
+        right: 32px;
+        transform: none;
+        /* Disable any weird transforms if any */
+    }
+
+    /* Move Fullscreen button to left of WhatsApp on Desktop */
+    .demo-page__fullscreen-btn {
+        bottom: 32px;
+        right: 100px;
+        /* 32px + 48px + gap */
+        width: 35px;
+        height: 35px;
+    }
+
+    /* Reset Room Selector position */
+    .demo-page__room-selector {
+        bottom: 20px;
+    }
+
+    /* Larger controls on desktop */
+    .demo-page__control-btn {
+        width: 35px;
+        height: 35px;
+    }
+
+    .demo-page__controls {
+        left: 32px;
+        gap: 12px;
+    }
+
+    /* Center Nav Arrows with more padding */
+    .demo-page__nav-arrow--left {
+        left: 32px;
+    }
+
+    .demo-page__nav-arrow--right {
+        right: 32px;
+    }
 }

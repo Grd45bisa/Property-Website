@@ -46,6 +46,7 @@ const EditTourPage: React.FC = () => {
     const [copied, setCopied] = useState<'link' | 'embed' | null>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
     const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -60,6 +61,26 @@ const EditTourPage: React.FC = () => {
         reader.readAsDataURL(file);
         reader.onload = () => {
             setFormData(prev => ({ ...prev, coverImage: reader.result as string }));
+        };
+        reader.onerror = (error) => {
+            console.error('Error reading file:', error);
+            alert('Failed to read file');
+        };
+    };
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit for logo
+            alert('Logo file too large (Max 2MB)');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            setFormData(prev => ({ ...prev, clientLogo: reader.result as string }));
         };
         reader.onerror = (error) => {
             console.error('Error reading file:', error);
@@ -348,15 +369,43 @@ const EditTourPage: React.FC = () => {
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Logo Client (URL)</label>
-                                        <input
-                                            type="text"
-                                            name="clientLogo"
-                                            value={formData.clientLogo}
-                                            onChange={handleChange}
-                                            className="form-input"
-                                            placeholder="https://example.com/logo.png (Opsional)"
-                                        />
+                                        <label className="form-label">Logo Client (URL atau Upload)</label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                type="text"
+                                                name="clientLogo"
+                                                value={formData.clientLogo}
+                                                onChange={handleChange}
+                                                className="form-input"
+                                                placeholder="https://... atau Upload"
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn-upload-small"
+                                                onClick={() => logoInputRef.current?.click()}
+                                                style={{
+                                                    background: '#374151',
+                                                    border: '1px solid #4b5563',
+                                                    color: 'white',
+                                                    borderRadius: '8px',
+                                                    padding: '0 12px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
+                                                }}
+                                            >
+                                                <span className="material-icons" style={{ fontSize: '18px' }}>cloud_upload</span>
+                                            </button>
+                                            <input
+                                                type="file"
+                                                ref={logoInputRef}
+                                                style={{ display: 'none' }}
+                                                accept="image/*"
+                                                onChange={handleLogoUpload}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="form-group">

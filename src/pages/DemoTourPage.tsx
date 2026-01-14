@@ -117,7 +117,8 @@ const DemoTourPage: React.FC = () => {
                 cssClass: (() => {
                     const baseClass = 'custom-hotspot';
                     // typeClass logic synced with Editor
-                    let typeClass = hs.type === 'scene' ? 'custom-hotspot--scene' : 'custom-hotspot--info';
+                    const isNavHotspot = hs.type === 'scene' || hs.icon === 'door' || hs.icon === 'arrow' || hs.icon === 'nav_arrow';
+                    let typeClass = isNavHotspot ? 'custom-hotspot--scene' : 'custom-hotspot--info';
                     if (hs.icon === 'blur') typeClass = 'custom-hotspot--blur';
 
                     const renderClass = hs.renderMode === 'floor' ? 'custom-hotspot--floor'
@@ -207,7 +208,8 @@ const DemoTourPage: React.FC = () => {
                 clickHandlerFunc: () => {
                     if (hs.icon === 'blur') return;
 
-                    if (hs.type === 'scene' && hs.targetRoomId) {
+                    const isNavHotspot = hs.type === 'scene' || hs.icon === 'door' || hs.icon === 'arrow' || hs.icon === 'nav_arrow';
+                    if (isNavHotspot && hs.targetRoomId) {
                         // Start transition effect: zoom in/fade out
                         setIsTransitioning(true);
 
