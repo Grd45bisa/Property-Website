@@ -33,7 +33,7 @@ const Hero: React.FC = () => {
                     <h1 className="hero__title">
                         JUAL PROPERTI
                         <br />
-                        <span className="hero__title-highlight">5X LEBIH CEPAT</span>
+                        <span className="hero__title-highlight"> 5X LEBIH CEPAT</span>
                         <span className="hero__title-sub">dengan Virtual Tour Imersif</span>
                     </h1>
 

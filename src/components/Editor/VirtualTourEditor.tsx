@@ -610,7 +610,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             viewer.on('mousedown', handleViewerClick);
         }
 
-    }, [activeScene?.hotspots, selectedHotspotId, isPreviewMode, handleViewerClick]);
+    }, [activeScene?.hotspots, selectedHotspotId, isPreviewMode, handleViewerClick, activeScene?.imageUrl]);
 
 
 
@@ -894,7 +894,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             // Warning: This is destructive but simple for "Save All" logic.
 
             // Collect all hotspot objects
-            let allHotspots: HotspotInsert[] = [];
+            const allHotspots: HotspotInsert[] = [];
             scenes.forEach(s => {
                 s.hotspots.forEach(h => {
                     allHotspots.push({
@@ -1289,9 +1289,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 ref={viewerRef}
                 className={`vt-editor__viewer ${isAddMode ? 'vt-editor__viewer--add-mode' : ''}`}
             >
-                {/* Crosshair Overlay (Only in Edit Mode) */}
-                {!isPreviewMode && <div className="vt-editor__crosshair" />}
             </div>
+            {/* Crosshair Overlay (Only in Edit Mode) - Moved outside viewer to prevent React DOM conflicts */}
+            {!isPreviewMode && <div className="vt-editor__crosshair" />}
 
             {/* 2. Top Bar */}
             {!isPreviewMode ? (
@@ -1630,35 +1630,6 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                                         onChange={(e) => updateHotspot(selectedHotspot.id, { text: e.target.value })}
                                         placeholder="Enter hotspot label..."
                                     />
-                                </div>
-                            )}
-
-                            {/* Interaction Mode (Info Only) */}
-                            {selectedHotspot.icon === 'info' && (
-                                <div className="vt-editor__form-group">
-                                    <label>Interaction Type</label>
-                                    <div style={{ display: 'flex', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '6px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
-                                            <input
-                                                type="radio"
-                                                name="interactionMode"
-                                                value="popup"
-                                                checked={!selectedHotspot.interactionMode || selectedHotspot.interactionMode === 'popup'}
-                                                onChange={() => updateHotspot(selectedHotspot.id, { interactionMode: 'popup' })}
-                                            />
-                                            Popup Card
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
-                                            <input
-                                                type="radio"
-                                                name="interactionMode"
-                                                value="label"
-                                                checked={selectedHotspot.interactionMode === 'label'}
-                                                onChange={() => updateHotspot(selectedHotspot.id, { interactionMode: 'label' })}
-                                            />
-                                            Label Only
-                                        </label>
-                                    </div>
                                 </div>
                             )}
 

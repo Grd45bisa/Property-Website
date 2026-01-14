@@ -16,7 +16,7 @@ const TrustLogos: React.FC = () => {
     return (
         <section className="trust-logos" aria-label="Partner yang mempercayai kami">
             <div className="trust-logos__container">
-                <p className="trust-logos__title">Dipercaya oleh agen properti terkemuka</p>
+                <p className="trust-logos__title">Dipercaya oleh agen properti di Indonesia</p>
                 <div className="trust-logos__list">
                     {logos.map((logo) => (
                         <div key={logo.name} className="trust-logos__item">

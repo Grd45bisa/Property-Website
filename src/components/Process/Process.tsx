@@ -9,7 +9,6 @@ interface ProcessStep {
 }
 
 const Process: React.FC = () => {
-    const whatsappNumber = '6281234567890';
 
     const steps: ProcessStep[] = [
         {
@@ -62,27 +61,6 @@ const Process: React.FC = () => {
                             <p className="process__step-description">{step.description}</p>
                         </article>
                     ))}
-                </div>
-
-                {/* CTA */}
-                <div id="pricing" className="process__cta">
-                    <div className="process__cta-content">
-                        <h3 className="process__cta-title">Mulai dari Rp 750.000</h3>
-                        <p className="process__cta-text">
-                            Investasi kecil untuk hasil maksimal
-                        </p>
-                    </div>
-                    <a
-                        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan layanan virtual tour.')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="process__cta-button"
-                    >
-                        <span className="material-icons process__cta-icon" aria-hidden="true">
-                            chat
-                        </span>
-                        Konsultasi Gratis
-                    </a>
                 </div>
             </div>
         </section>

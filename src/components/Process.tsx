@@ -6,7 +6,7 @@ interface ProcessStep {
     description: string;
 }
 
-const Process: React.FC = () => {
+const Process2: React.FC = () => {
     const steps: ProcessStep[] = [
         {
             icon: 'calendar_today',
@@ -83,4 +83,4 @@ const Process: React.FC = () => {
     );
 };
 
-export default Process;
+export default Process2;

@@ -18,7 +18,7 @@ const Hero: React.FC = () => {
                     {/* Headline */}
                     <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight mb-3 sm:mb-4 md:mb-6 leading-tight">
                         JUAL PROPERTI<br />
-                        <span className="text-primary">5X LEBIH CEPAT</span><br />
+                        <span className="text-primary"> 5X LEBIH CEPAT</span><br />
                         <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white/90">dengan Virtual Tour Imersif</span>
                     </h1>
 

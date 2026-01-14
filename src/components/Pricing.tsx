@@ -1,4 +1,5 @@
 import React from 'react';
+import './Pricing.css'; // Import the new CSS file
 
 interface PricingFeature {
     text: string;
@@ -8,70 +9,74 @@ interface PricingFeature {
 interface PricingTier {
     name: string;
     price: string;
-    priceNote: string;
-    description: string;
+    originalPrice?: string;
+    priceNote?: string;
+    description?: string;
     features: PricingFeature[];
     bonuses?: string[];
     popular?: boolean;
-    ctaText: string;
+    buttonText?: string; // Optional, since some might not have it
+    showButton?: boolean;
 }
+
+const WhatsAppIcon = () => (
+    <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
+    >
+        <path d="M24 0v24H0V0z" fill="none" />
+        <path d="M12.593 23.258l-.011.002-.071.035-.02.004-.014-.004-.071-.035q-.016-.005-.024.005l-.004.01-.017.428.005.02.01.013.104.074.015.004.012-.004.104-.074.012-.016.004-.017-.017-.427q-.004-.016-.017-.018m.265-.113-.013.002-.185.093-.01.01-.003.011.018.43.005.012.008.007.201.093q.019.005.029-.008l.004-.014-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014-.034.614q.001.018.017.024l.015-.002.201-.093.01-.008.004-.011.017-.43-.003-.012-.01-.01z" opacity="0" />
+        <path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.863-1.26l-.305-.178-3.032.892a1.01 1.01 0 0 1-1.28-1.145l.026-.109.892-3.032A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.759 12.282c.198.312.283.696.216 1.077l-.039.163-.441 1.501 1.501-.441c.433-.128.883-.05 1.24.177A8 8 0 1 0 12 4M9.102 7.184a.7.7 0 0 1 .684.075c.504.368.904.862 1.248 1.344l.327.474.153.225a.71.71 0 0 1-.046.864l-.075.076-.924.686a.23.23 0 0 0-.067.291c.21.38.581.947 1.007 1.373.427.426 1.02.822 1.426 1.055.088.05.194.034.266-.031l.038-.045.601-.915a.71.71 0 0 1 .973-.158l.543.379c.54.385 1.059.799 1.47 1.324a.7.7 0 0 1 .089.703c-.396.924-1.399 1.711-2.441 1.673l-.159-.01-.191-.018-.108-.014-.238-.04c-.924-.174-2.405-.698-3.94-2.232-1.534-1.535-2.058-3.016-2.232-3.94l-.04-.238-.025-.208-.013-.175-.004-.075c-.038-1.044.753-2.047 1.678-2.443" />
+    </svg>
+);
 
 const Pricing: React.FC = () => {
     const whatsappNumber = '6281234567890';
 
     const tiers: PricingTier[] = [
         {
-            name: 'LITE',
-            price: 'Rp 750.000',
-            priceNote: '/properti',
-            description: 'Cocok untuk properti kecil dan first-timer',
+            name: 'STARTER',
+            originalPrice: 'Rp 1.500.000',
+            price: 'Rp 899.000',
             features: [
-                { text: '1 properti (max 100m²)', included: true },
-                { text: '10-15 foto berkualitas tinggi', included: true },
-                { text: 'Virtual tour 360° basic', included: true },
-                { text: 'Hosting 1 tahun', included: true },
-                { text: 'Revisi 1x', included: true },
-                { text: 'Delivery 3-5 hari', included: true },
-                { text: 'Floor plan', included: false },
-                { text: 'Video highlight', included: false },
+                { text: 'Max 10 Titik (Spot)', included: true },
+                { text: 'Resolusi 120MP Ultra HD', included: true },
+                { text: 'Tombol WhatsApp', included: true },
+                { text: 'Hosting Gratis 6 Bulan', included: true },
             ],
-            ctaText: 'Pilih LITE',
+            showButton: false,
         },
         {
             name: 'PRO',
-            price: 'Rp 1.500.000',
-            priceNote: '/properti',
-            description: 'Best value untuk agen profesional',
+            originalPrice: 'Rp 3.000.000',
+            price: 'Rp 1.999.000',
             popular: true,
             features: [
-                { text: '1 properti (max 250m²)', included: true },
-                { text: '20-30 foto 120MP', included: true },
-                { text: 'Virtual tour 360° premium + hotspots', included: true },
-                { text: 'Floor plan 2D', included: true },
-                { text: 'Hosting 2 tahun', included: true },
-                { text: 'Revisi 3x', included: true },
-                { text: 'Delivery 2-3 hari', included: true },
+                { text: 'Max 20 Titik (Spot)', included: true },
+                { text: 'Resolusi 120MP Ultra HD', included: true },
+                { text: 'Tombol WhatsApp & Menu', included: true },
+                { text: 'Upload Google Street View', included: true },
+                { text: 'Hosting Gratis 1 Tahun', included: true },
+                { text: 'Prioritas Editing', included: true },
             ],
-            bonuses: ['Video highlight 30 detik'],
-            ctaText: 'Pilih PRO',
+            showButton: false,
         },
         {
-            name: 'ENTERPRISE',
-            price: 'Rp 3.500.000',
-            priceNote: '/properti',
-            description: 'Solusi lengkap untuk properti premium',
+            name: 'BUSINESS',
+            price: 'Hubungi Kami',
             features: [
-                { text: '1 properti (unlimited size)', included: true },
-                { text: '40+ foto 120MP', included: true },
-                { text: 'Virtual tour 360° + interactive hotspots', included: true },
-                { text: 'Floor plan 2D & 3D', included: true },
-                { text: 'Drone footage', included: true },
-                { text: 'Hosting 3 tahun', included: true },
-                { text: 'Revisi unlimited', included: true },
-                { text: 'Delivery 1-2 hari', included: true },
+                { text: 'Unlimited Titik', included: true },
+                { text: 'White Label (Tanpa Logo Kami)', included: true },
+                { text: 'Custom Navigasi & Fitur', included: true },
+                { text: 'Prioritas Support', included: true },
+                { text: 'Hosting Gratis 1 Tahun', included: true },
+                { text: 'Custom Domain', included: true },
             ],
-            bonuses: ['Video cinematic 1 menit', 'Social media content pack'],
-            ctaText: 'Pilih ENTERPRISE',
+            showButton: true,
+            buttonText: 'Konsultasi via WA',
         },
     ];
 
@@ -81,127 +86,93 @@ const Pricing: React.FC = () => {
     };
 
     return (
-        <section id="pricing" className="py-12 sm:py-16 md:py-20 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="pricing" className="pricing-section">
+            {/* Background Decoration */}
+            <div className="pricing-bg-decoration">
+                <div className="pricing-blob-blue" />
+                <div className="pricing-blob-green" />
+            </div>
+
+            <div className="pricing-container">
                 {/* Section Header */}
-                <div className="text-center mb-10 sm:mb-12">
-                    <span className="inline-block text-primary text-xs font-bold uppercase tracking-widest mb-2">
-                        Harga
+                <div className="pricing-header">
+                    <span className="pricing-badge">
+                        Penawaran Spesial
                     </span>
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-                        Pilih Paket yang Sesuai
+                    <h2 className="pricing-title">
+                        Investasi Terbaik untuk Properti Anda
                     </h2>
-                    <p className="text-gray-500 text-sm sm:text-base max-w-2xl mx-auto">
-                        Investasi kecil untuk hasil maksimal. Semua paket termasuk shooting profesional di lokasi.
+                    <p className="pricing-subtitle">
+                        Tingkatkan nilai jual properti dengan visual 360° yang memukau.
+                        Tanpa biaya tersembunyi, satu kali bayar.
                     </p>
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                <div className="pricing-grid">
                     {tiers.map((tier) => (
                         <div
                             key={tier.name}
-                            className={`
-                                relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl
-                                ${tier.popular
-                                    ? 'ring-2 ring-primary scale-[1.02] md:scale-105'
-                                    : 'hover:scale-[1.02]'
-                                }
-                            `}
+                            className={`pricing-card ${tier.popular ? 'pricing-card--popular' : 'pricing-card--default'}`}
                         >
-                            {/* Popular Badge */}
                             {tier.popular && (
-                                <div className="absolute top-0 right-0">
-                                    <div className="bg-primary text-white text-[10px] sm:text-xs font-bold uppercase tracking-wide px-3 sm:px-4 py-1 sm:py-1.5 rounded-bl-xl shadow-lg">
+                                <div className="pricing-popular-badge-wrapper">
+                                    <span className="pricing-popular-badge">
+                                        <span className="material-icons" style={{ fontSize: '14px' }}>local_fire_department</span>
                                         Paling Laris
-                                    </div>
+                                    </span>
                                 </div>
                             )}
 
                             {/* Card Header */}
-                            <div className={`p-5 sm:p-6 ${tier.popular ? 'bg-primary/5' : ''}`}>
-                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+                            <div className="pricing-card-header">
+                                <h3 className={`pricing-tier-name ${tier.popular ? 'pricing-tier-name--highlight' : ''}`}>
                                     {tier.name}
                                 </h3>
-                                <p className="text-xs sm:text-sm text-gray-500 mb-4">
-                                    {tier.description}
-                                </p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl sm:text-4xl font-extrabold text-gray-900">
-                                        {tier.price}
-                                    </span>
-                                    <span className="text-sm text-gray-500">
-                                        {tier.priceNote}
-                                    </span>
+
+                                {tier.originalPrice && (
+                                    <div className="pricing-original-price">
+                                        {tier.originalPrice}
+                                    </div>
+                                )}
+
+                                <div className={`pricing-price ${tier.name === 'BUSINESS' ? 'pricing-price--text' : 'pricing-price--large'}`}>
+                                    {tier.price}
                                 </div>
                             </div>
 
                             {/* Features */}
-                            <div className="p-5 sm:p-6 pt-0 sm:pt-0">
-                                <ul className="space-y-2.5 sm:space-y-3 mb-6">
+                            <div className="pricing-features-container">
+                                <ul className="pricing-features-list">
                                     {tier.features.map((feature, idx) => (
-                                        <li key={idx} className="flex items-start gap-2.5 sm:gap-3">
-                                            <span className={`material-icons text-base sm:text-lg mt-0.5 flex-shrink-0 ${feature.included ? 'text-primary' : 'text-gray-300'
-                                                }`}>
-                                                {feature.included ? 'check_circle' : 'cancel'}
-                                            </span>
-                                            <span className={`text-xs sm:text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400 line-through'
-                                                }`}>
+                                        <li key={idx} className="pricing-feature-item">
+                                            <div className={`pricing-check-icon ${tier.popular ? 'pricing-check-icon--active' : 'pricing-check-icon--inactive'}`}>
+                                                <span className="material-icons" style={{ fontSize: '12px', fontWeight: 'bold' }}>check</span>
+                                            </div>
+                                            <span className="pricing-feature-text">
                                                 {feature.text}
                                             </span>
                                         </li>
                                     ))}
                                 </ul>
+                            </div>
 
-                                {/* Bonuses */}
-                                {tier.bonuses && tier.bonuses.length > 0 && (
-                                    <div className="mb-6 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                                        <div className="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-wide mb-2">
-                                            🎁 Bonus
-                                        </div>
-                                        {tier.bonuses.map((bonus, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
-                                                <span className="material-icons text-primary text-sm">star</span>
-                                                {bonus}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* CTA Button */}
+                            {/* Button */}
+                            {tier.showButton ? (
                                 <button
                                     onClick={() => handleWhatsApp(tier.name)}
-                                    className={`
-                                        w-full py-3 sm:py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 flex items-center justify-center gap-2
-                                        ${tier.popular
-                                            ? 'bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40'
-                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                                        }
-                                    `}
+                                    className="pricing-button"
                                 >
-                                    <span className="material-icons text-lg">chat</span>
-                                    {tier.ctaText}
+                                    <WhatsAppIcon />
+                                    {tier.buttonText}
                                 </button>
-                            </div>
+                            ) : (
+                                <div className="pricing-slot-text">
+                                    Slot Terbatas
+                                </div>
+                            )}
                         </div>
                     ))}
-                </div>
-
-                {/* Bottom Note */}
-                <div className="mt-10 sm:mt-12 text-center">
-                    <p className="text-xs sm:text-sm text-gray-500 mb-4">
-                        Butuh paket custom atau multiple properti? Hubungi kami untuk penawaran khusus.
-                    </p>
-                    <a
-                        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Halo, saya butuh penawaran custom untuk virtual tour.')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold text-sm transition-colors"
-                    >
-                        <span className="material-icons text-lg">support_agent</span>
-                        Konsultasi Gratis
-                        <span className="material-icons text-sm">arrow_forward</span>
-                    </a>
                 </div>
             </div>
         </section>
