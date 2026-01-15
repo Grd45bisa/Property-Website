@@ -37,6 +37,7 @@ interface Room {
     thumbnail?: string; // Blur placeholder for instant loading
     hotSpots: HotSpot[];
     initialView?: { pitch: number; yaw: number };
+    autoRotate?: number;
 }
 
 const TourPage: React.FC = () => {
@@ -140,6 +141,7 @@ const TourPage: React.FC = () => {
                         pitch: room.initial_view_pitch ?? 0,
                         yaw: room.initial_view_yaw ?? 0
                     },
+                    autoRotate: room.auto_rotate ?? 0,
                     hotSpots: (hotspotsData || [])
                         .filter(h => h.room_id === room.id)
                         .map(h => ({
@@ -379,45 +381,68 @@ const TourPage: React.FC = () => {
 
             // Client-side image optimization and memory management
             const loadAndResizeImage = async (imageUrl: string): Promise<string> => {
-                const isMobile = window.innerWidth < 1024;
-                // Higher res for better quality - only resize if image is larger than limit
-                // Mobile: 4096px, Desktop: 8192px (original quality)
-                const MAX_SIZE = isMobile ? 4096 : 8192;
+                // Feature Detection: WebGL Max Texture Size
+                const getGlMaxTextureSize = (): number => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                        if (!gl) return 4096; // Fallback
+                        return (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).MAX_TEXTURE_SIZE);
+                    } catch (e) {
+                        return 4096;
+                    }
+                };
+
+                const maxTextureSize = getGlMaxTextureSize();
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                // Determine Safe Limit
+                // Mobile: Cap at 4096px (4K) to prevent VRAM crashes, unless device specifically supports less.
+                // Desktop: Cap at min(HardwareLimit, 8192px) for performance/loading balance.
+                // Note: Even if an iPhone supports 16k textures, memory pressure will crash the browser tab. 4k is the safe "Max" for stable mobile web.
+                let safeLimit = isMobile ? 4096 : 8192;
+
+                // Ensure we don't exceed hardware capability
+                safeLimit = Math.min(safeLimit, maxTextureSize);
+
+                // Additional check for severe memory constraints (if possible) or very old devices could go here.
 
                 try {
                     // Fetch blob
                     const response = await fetch(imageUrl);
                     const blob = await response.blob();
 
-                    // Create bitmap/image to check dimensions
+                    // Create bitmap to check dimensions (more efficient than Image element)
                     const img = await createImageBitmap(blob);
 
-                    // If image is within safe limits, return original URL (but keep track if it's a blob?)
-                    // Actually, getting a blob URL from fetch response is better for memory tracking if we used URL.createObjectURL(blob).
-                    // But here we might return the original string if no resize needed.
-                    // However, for consistency and avoiding cross-origin weirdness on some texture loaders, let's just use the original string if small enough.
-
-                    if (img.width <= MAX_SIZE) {
-                        // Close bitmap to free memory
+                    // If within safe limits, use original
+                    if (img.width <= safeLimit) {
                         img.close();
+                        // Return blob URL to avoid re-fetching? 
+                        // Actually original string is better for caching if we don't need to resize.
+                        // But using blob URL here ensures consistency if we need to revoke later?
+                        // Let's stick to original URL if no resize needed to save memory (no double blob).
                         return imageUrl;
                     }
 
                     // Resize required
+                    console.log(`Optimizing image: ${img.width}px -> ${safeLimit}px (Mobile: ${isMobile})`);
+
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     if (!ctx) { img.close(); return imageUrl; }
 
-                    // Calculate new aspect ratio preserving dims
-                    const scale = MAX_SIZE / img.width;
-                    canvas.width = MAX_SIZE;
-                    canvas.height = img.height * scale;
+                    // Maintain Aspect Ratio
+                    const scale = safeLimit / img.width;
+                    canvas.width = safeLimit;
+                    canvas.height = Math.round(img.height * scale);
 
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    img.close(); // Free bitmap memory immediately
+                    img.close();
 
                     // Convert to blob url
                     return new Promise((resolve) => {
+                        // Use slightly lower quality (0.85) to save significant VRAM with negligible visual loss
                         canvas.toBlob((resizedBlob) => {
                             if (resizedBlob) {
                                 const newUrl = URL.createObjectURL(resizedBlob);
@@ -425,10 +450,10 @@ const TourPage: React.FC = () => {
                             } else {
                                 resolve(imageUrl);
                             }
-                        }, 'image/jpeg', 0.80); // 0.8 quality is sufficient for 360 and saves memory
+                        }, 'image/jpeg', 0.85);
                     });
                 } catch (e) {
-                    console.error("Resize failed, using original", e);
+                    console.warn("Resize optimization failed, falling back to original:", e);
                     return imageUrl;
                 }
             };
@@ -443,8 +468,13 @@ const TourPage: React.FC = () => {
                     lastObjectUrl.current = null;
                 }
 
-                // Always use full quality image
-                const initialImage = currentRoom.image;
+                // Optimized Image Loading
+                const optimizedImage = await loadAndResizeImage(currentRoom.image);
+
+                // Track if it's a blob URL so we can revoke it later
+                if (optimizedImage.startsWith('blob:')) {
+                    lastObjectUrl.current = optimizedImage;
+                }
 
                 // Destroy existing viewer only when we're ready to create new one
                 if (pannellumInstance.current) {
@@ -466,7 +496,7 @@ const TourPage: React.FC = () => {
                 // First time initialization - create new viewer
                 pannellumInstance.current = window.pannellum.viewer(viewerRef.current, {
                     type: 'equirectangular',
-                    panorama: initialImage,
+                    panorama: optimizedImage,
                     autoLoad: true,
                     showControls: false,
                     showFullscreenCtrl: false,
@@ -479,7 +509,7 @@ const TourPage: React.FC = () => {
                     mouseZoom: true,
                     draggable: true,
                     friction: 0.15,
-                    autoRotate: -0.3,
+                    autoRotate: currentRoom.autoRotate ?? 0,
                     hotSpots: hotSpots,
                     preview: undefined
                 });

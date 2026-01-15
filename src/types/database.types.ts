@@ -63,6 +63,7 @@ export interface Database {
                     image_url: string
                     thumbnail_url: string | null
                     sequence_order: number
+                    auto_rotate: number | null
                 }
                 Insert: {
                     id?: string
@@ -73,6 +74,7 @@ export interface Database {
                     image_url: string
                     thumbnail_url?: string | null
                     sequence_order?: number
+                    auto_rotate?: number | null
                 }
                 Update: {
                     id?: string
@@ -83,6 +85,7 @@ export interface Database {
                     image_url?: string
                     thumbnail_url?: string | null
                     sequence_order?: number
+                    auto_rotate?: number | null
                 }
             }
             hotspots: {

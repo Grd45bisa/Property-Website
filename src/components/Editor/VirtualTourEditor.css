@@ -479,9 +479,17 @@
 }
 
 .vt-editor__tool-btn.active {
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow:
+        0 0 0 2px rgba(16, 185, 129, 0.2),
+        /* Outer ring */
+        0 4px 12px rgba(16, 185, 129, 0.5),
+        /* Drop shadow glow */
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    /* Inner highlight */
+    border: 1px solid rgba(16, 185, 129, 0.5);
+    transform: translateY(-1px);
 }
 
 /* Tooltip for toolbar */
@@ -945,4 +953,40 @@
     left: 9px;
     width: 2px;
     height: 20px;
+}
+
+/* ----------------------------------------
+   8. Image Metadata (Resolution & Size)
+   --------------------------------======== */
+.vt-editor__image-stats {
+    margin-right: 12px;
+    padding: 0 16px;
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
+    /* Ensure pill shape */
+}
+
+.vt-editor__image-stats:hover {
+    transform: none;
+    /* No movement on hover since it's not clickable */
+    background: rgba(30, 30, 40, 0.85);
+    /* Keep background static */
+    box-shadow: none;
+}
+
+.vt-editor__image-dim {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 11px;
+    color: #e5e7eb;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.vt-editor__image-size {
+    font-size: 11px;
+    color: #10b981;
+    font-weight: 600;
+    padding-left: 12px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    line-height: 1;
 }

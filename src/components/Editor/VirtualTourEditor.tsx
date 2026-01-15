@@ -21,6 +21,7 @@ interface Scene {
     hotspots: Hotspot[];
     sequence_order?: number;
     initialView?: { pitch: number; yaw: number };
+    autoRotate?: number;
 }
 
 type HotspotIcon = 'info' | 'door' | 'arrow' | 'nav_arrow' | 'blur';
@@ -92,10 +93,12 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     const [isNadirModalOpen, setIsNadirModalOpen] = useState(false);
 
 
-
     // Pitch Limit State (controls how far down user can look)
     const [minPitch, setMinPitch] = useState<number>(-90); // -90 = full view, higher = more restricted
     const [isPitchModalOpen, setIsPitchModalOpen] = useState(false);
+
+    // Auto-Rotate State
+    const [isAutoRotateModalOpen, setIsAutoRotateModalOpen] = useState(false);
 
     // Compression Tool State
     const [isCompressModalOpen, setIsCompressModalOpen] = useState(false);
@@ -113,7 +116,9 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
     const [isAddMode, setIsAddMode] = useState(false);
     const [addModeIcon, setAddModeIcon] = useState<HotspotIcon>('info');
     const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
+    const [imageStats, setImageStats] = useState<{ size: string, dimensions: string } | null>(null);
     const [toast, setToast] = useState<string | null>(null);
+    const [viewerVersion, setViewerVersion] = useState(0); // To trigger sync after async init
 
     const activeScene = scenes.find(s => s.id === activeSceneId);
     const selectedHotspot = activeScene?.hotspots.find(h => h.id === selectedHotspotId);
@@ -314,6 +319,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                     pitch: room.initial_view_pitch ?? 0,
                     yaw: room.initial_view_yaw ?? 0
                 },
+                autoRotate: room.auto_rotate ?? 0, // Default 0 (off)
                 hotspots: hotspots
                     .filter(h => h.room_id === room.id)
                     .map(h => ({
@@ -498,19 +504,90 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
 
 
 
-            pannellumInstance.current = window.pannellum.viewer(viewerRef.current, {
-                type: 'equirectangular',
-                panorama: activeScene.imageUrl,
-                autoLoad: true,
-                showControls: !isPreviewMode,
-                showFullscreenCtrl: false,
-                hotSpots: [], // Start empty, let Sync Effect handle it to ensure consistency
-                pitch: activeScene.initialView?.pitch ?? 0,
-                yaw: activeScene.initialView?.yaw ?? 0,
-                hfov: 100,
-                minPitch: minPitch, // Apply pitch limit
-                maxPitch: 90
+            // Client-side image optimization and memory management
+            const loadAndResizeImage = async (imageUrl: string): Promise<string> => {
+                // Feature Detection: WebGL Max Texture Size
+                const getGlMaxTextureSize = (): number => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                        if (!gl) return 4096; // Fallback
+                        return (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).MAX_TEXTURE_SIZE);
+                    } catch (e) {
+                        return 4096;
+                    }
+                };
+
+                const maxTextureSize = getGlMaxTextureSize();
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                let safeLimit = isMobile ? 4096 : 8192;
+                safeLimit = Math.min(safeLimit, maxTextureSize);
+
+                try {
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    const img = await createImageBitmap(blob);
+
+                    if (img.width <= safeLimit) {
+                        img.close();
+                        return imageUrl;
+                    }
+
+                    console.log(`Editor: Optimizing image ${img.width}px -> ${safeLimit}px`);
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { img.close(); return imageUrl; }
+
+                    const scale = safeLimit / img.width;
+                    canvas.width = safeLimit;
+                    canvas.height = Math.round(img.height * scale);
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    img.close();
+
+                    return new Promise((resolve) => {
+                        canvas.toBlob((resizedBlob) => {
+                            if (resizedBlob) {
+                                resolve(URL.createObjectURL(resizedBlob));
+                            } else {
+                                resolve(imageUrl);
+                            }
+                        }, 'image/jpeg', 0.85);
+                    });
+                } catch (e) {
+                    console.warn("Resize failed, using original", e);
+                    return imageUrl;
+                }
+            };
+
+            // Initialize with optimized image
+            loadAndResizeImage(activeScene.imageUrl).then(optimizedUrl => {
+                if (!viewerRef.current) return; // Cleanup check
+
+                // Double check if destroyed in mean time?
+                if (pannellumInstance.current) {
+                    pannellumInstance.current.destroy();
+                }
+
+                pannellumInstance.current = window.pannellum.viewer(viewerRef.current, {
+                    type: 'equirectangular',
+                    panorama: optimizedUrl,
+                    autoLoad: true,
+                    showControls: !isPreviewMode,
+                    showFullscreenCtrl: false,
+                    hotSpots: [],
+                    pitch: activeScene.initialView?.pitch ?? 0,
+                    yaw: activeScene.initialView?.yaw ?? 0,
+                    hfov: 100,
+                    minPitch: minPitch,
+                    maxPitch: 90,
+                    autoRotate: activeScene.autoRotate ?? 0
+                });
+
+                // Notify that viewer is ready/reloaded so Hotspot Sync can run
+                setViewerVersion(v => v + 1);
             });
+
 
             // Event listener is handled in the Sync Effect below to avoid duplicates/race conditions
             // pannellumInstance.current.on('mousedown', handleViewerClick);
@@ -562,6 +639,65 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, [isAddMode]);
 
+    // Live Auto-Rotate Update
+    useEffect(() => {
+        if (pannellumInstance.current && activeScene) {
+            const speed = activeScene.autoRotate ?? 0;
+            if (typeof pannellumInstance.current.setAutoRotate === 'function') {
+                pannellumInstance.current.setAutoRotate(speed);
+            } else {
+                // Fallback for older versions or if setAutoRotate is missing
+                console.warn('setAutoRotate not found, trying start/stop fallback');
+                if (speed !== 0 && typeof pannellumInstance.current.startAutoRotate === 'function') {
+                    pannellumInstance.current.startAutoRotate(speed);
+                } else if (typeof pannellumInstance.current.stopAutoRotate === 'function') {
+                    pannellumInstance.current.stopAutoRotate();
+                }
+            }
+        }
+    }, [activeScene?.autoRotate]);
+
+    // Calculate Image Stats
+    useEffect(() => {
+        if (!activeScene?.imageUrl) {
+            setImageStats(null);
+            return;
+        }
+
+        const fetchStats = async () => {
+            const url = activeScene.imageUrl;
+            let sizeStr = 'Unknown size';
+            let dimStr = 'Unknown dim';
+
+            // 1. Get Dimensions
+            const img = new Image();
+            img.src = url;
+            await new Promise((resolve) => {
+                img.onload = () => {
+                    dimStr = `${img.naturalWidth} x ${img.naturalHeight}px`;
+                    resolve(true);
+                };
+                img.onerror = () => resolve(true);
+            });
+
+            // 2. Get File Size (if remote)
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                const bytes = parseInt(response.headers.get('content-length') || '0');
+                if (bytes > 0) {
+                    const mb = bytes / (1024 * 1024);
+                    sizeStr = `${mb.toFixed(2)} MB`;
+                }
+            } catch (e) {
+                // console.warn('Failed to fetch image size via HEAD');
+            }
+
+            setImageStats({ size: sizeStr, dimensions: dimStr });
+        };
+
+        fetchStats();
+    }, [activeScene?.imageUrl]);
+
     // 3. Sync Hotspots & Mode
     useEffect(() => {
         if (!pannellumInstance.current) return;
@@ -610,7 +746,11 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             viewer.on('mousedown', handleViewerClick);
         }
 
-    }, [activeScene?.hotspots, selectedHotspotId, isPreviewMode, handleViewerClick, activeScene?.imageUrl]);
+        if (!isPreviewMode) {
+            viewer.on('mousedown', handleViewerClick);
+        }
+
+    }, [activeScene?.hotspots, selectedHotspotId, isPreviewMode, handleViewerClick, activeScene?.imageUrl, viewerVersion]);
 
 
 
@@ -866,6 +1006,7 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                 sequence_order: index, // Save current order
                 initial_view_pitch: s.initialView?.pitch ?? 0,
                 initial_view_yaw: s.initialView?.yaw ?? 0,
+                auto_rotate: s.autoRotate ?? 0,
                 created_at: new Date().toISOString()
             }));
 
@@ -1324,6 +1465,12 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         )}
                     </div>
                     <div className="vt-editor__top-actions">
+                        {imageStats && (
+                            <div className="vt-editor__btn vt-editor__image-stats" style={{ cursor: 'default' }}>
+                                <span className="vt-editor__image-dim">{imageStats.dimensions}</span>
+                                <span className="vt-editor__image-size">{imageStats.size}</span>
+                            </div>
+                        )}
                         <button
                             className="vt-editor__btn"
                             onClick={() => setIsPreviewMode(true)}
@@ -1421,6 +1568,13 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         <span className="material-icons">vertical_align_bottom</span>
                     </button>
                     <button
+                        className={`vt-editor__tool-btn ${activeScene?.autoRotate ? 'active' : ''}`}
+                        onClick={() => setIsAutoRotateModalOpen(true)}
+                        data-tooltip="Auto Rotate"
+                    >
+                        <span className="material-icons">360</span>
+                    </button>
+                    <button
                         className="vt-editor__tool-btn"
                         onClick={handleSetInitialView}
                         data-tooltip="Set Pandangan Awal"
@@ -1485,128 +1639,219 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
             {isPitchModalOpen && (
                 <div className="vt-editor__modal-overlay">
                     <div className="vt-editor__modal">
-                        <h3>Batas Pandang Bawah</h3>
-                        <p className="vt-editor__modal-desc">
-                            Atur seberapa jauh pengunjung bisa melihat ke bawah. Berguna untuk menyembunyikan lantai/tripod.
-                        </p>
-
-                        {/* Visual Preview */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '20px',
-                            marginBottom: '20px',
-                            padding: '16px',
-                            background: 'rgba(0,0,0,0.3)',
-                            borderRadius: '12px'
-                        }}>
-                            <div style={{
-                                width: '100px',
-                                height: '100px',
-                                borderRadius: '50%',
-                                border: '3px solid rgba(255,255,255,0.3)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}>
-                                {/* Visible area indicator */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    // Calculate bottom cutoff based on minPitch
-                                    // -90 = 0% hidden, -45 = 25% hidden, 0 = 50% hidden
-                                    bottom: `${((90 + minPitch) / 180) * 100}%`,
-                                    background: 'rgba(16, 185, 129, 0.5)',
-                                    transition: 'bottom 0.2s'
-                                }} />
-                                {/* Center line */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: 0,
-                                    right: 0,
-                                    height: '1px',
-                                    background: 'rgba(255,255,255,0.5)'
-                                }} />
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                                    {minPitch}°
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                                    {minPitch === -90 ? 'Penuh (sampai bawah)' :
-                                        minPitch >= -30 ? 'Sangat terbatas' :
-                                            minPitch >= -60 ? 'Sedang' : 'Sedikit terbatas'}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Slider */}
-                        <div className="vt-editor__form-group">
-                            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span>Batas Minimum Pitch</span>
-                                <span style={{ color: '#9ca3af' }}>{minPitch}°</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="-90"
-                                max="-10"
-                                step="5"
-                                value={minPitch}
-                                onChange={(e) => setMinPitch(parseInt(e.target.value))}
-                                style={{
-                                    width: '100%',
-                                    height: '8px',
-                                    borderRadius: '4px',
-                                    background: `linear-gradient(to right, #10b981 ${((minPitch + 90) / 80) * 100}%, rgba(255,255,255,0.2) ${((minPitch + 90) / 80) * 100}%)`,
-                                    cursor: 'pointer',
-                                    WebkitAppearance: 'none',
-                                    appearance: 'none'
-                                }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                                <span>-90° (Penuh)</span>
-                                <span>-10° (Terbatas)</span>
-                            </div>
-                        </div>
-
-                        {/* Preset Buttons */}
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                            {[
-                                { value: -90, label: 'Penuh' },
-                                { value: -70, label: 'Tripod Hidden' },
-                                { value: -50, label: 'Sedang' },
-                                { value: -30, label: 'Terbatas' }
-                            ].map(preset => (
-                                <button
-                                    key={preset.value}
-                                    className={`vt-editor__btn ${minPitch === preset.value ? 'vt-editor__btn--primary' : ''}`}
-                                    onClick={() => setMinPitch(preset.value)}
-                                    style={{ flex: 1, justifyContent: 'center', padding: '8px 12px' }}
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="vt-editor__modal-actions">
-                            <button
-                                className="vt-editor__btn vt-editor__btn--primary"
-                                onClick={() => setIsPitchModalOpen(false)}
-                            >
-                                Selesai
+                        <div className="vt-editor__modal-header">
+                            <h3>Batas Pandang Bawah (Nadir)</h3>
+                            <button onClick={() => setIsPitchModalOpen(false)}>
+                                <span className="material-icons">close</span>
                             </button>
+                        </div>
+                        <div className="vt-editor__modal-content">
+                            <p className="vt-editor__modal-desc" style={{ marginBottom: '20px' }}>
+                                Atur seberapa jauh pengunjung bisa melihat ke bawah. Berguna untuk menyembunyikan lantai/tripod.
+                            </p>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                                <div style={{
+                                    width: '60px',
+                                    height: '60px',
+                                    borderRadius: '50%',
+                                    border: '2px solid #374151',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: `${((minPitch + 90) / 90) * 100}%`,
+                                        background: 'rgba(16, 185, 129, 0.2)',
+                                        transition: 'height 0.2s'
+                                    }} />
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: `${((minPitch + 90) / 90) * 100}%`,
+                                        left: 0,
+                                        right: 0,
+                                        height: '1px',
+                                        background: 'rgba(255,255,255,0.5)'
+                                    }} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                                        {minPitch}°
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                                        {minPitch === -90 ? 'Penuh (sampai bawah)' :
+                                            minPitch >= -30 ? 'Sangat terbatas' :
+                                                minPitch >= -60 ? 'Sedang' : 'Sedikit terbatas'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Slider */}
+                            <div className="vt-editor__form-group">
+                                <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                    <span>Batas Minimum Pitch</span>
+                                    <span style={{ color: '#9ca3af' }}>{minPitch}°</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="-90"
+                                    max="-10"
+                                    step="5"
+                                    value={minPitch}
+                                    onChange={(e) => setMinPitch(parseInt(e.target.value))}
+                                    className="vt-editor__range"
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    <span>-90° (Penuh)</span>
+                                    <span>-10° (Terbatas)</span>
+                                </div>
+                            </div>
+
+                            {/* Preset Buttons */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                                {[
+                                    { value: -90, label: 'Penuh' },
+                                    { value: -45, label: 'Normal' },
+                                    { value: -20, label: 'Terbatas' }
+                                ].map(preset => (
+                                    <button
+                                        key={preset.value}
+                                        onClick={() => setMinPitch(preset.value)}
+                                        className={`vt-editor__btn ${minPitch === preset.value ? 'vt-editor__btn--active' : ''}`}
+                                        style={{ flex: 1, fontSize: '12px' }}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="vt-editor__modal-actions">
+                                <button
+                                    className="vt-editor__btn vt-editor__btn--primary"
+                                    onClick={() => setIsPitchModalOpen(false)}
+                                >
+                                    Selesai
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Auto-Rotate Modal */}
+            {isAutoRotateModalOpen && activeScene && (
+                <div className="vt-editor__modal-overlay">
+                    <div className="vt-editor__modal">
+                        <div className="vt-editor__modal-header">
+                            <h3>Auto Rotate Settings</h3>
+                            <button onClick={() => setIsAutoRotateModalOpen(false)}>
+                                <span className="material-icons">close</span>
+                            </button>
+                        </div>
+                        <div className="vt-editor__modal-content">
+                            <div className="vt-editor__section">
+                                <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+                                    Atur kecepatan putaran otomatis untuk scene <strong>{activeScene.name}</strong>.
+                                </p>
 
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', gap: '16px' }}>
+                                    {/* Left Icon (Visual) - Associated with Positive Value (Camera Right, Image Left) */}
+                                    <span className="material-icons" style={{
+                                        color: (activeScene.autoRotate || 0) > 0 ? '#10b981' : '#4b5563',
+                                        fontSize: '32px',
+                                        opacity: (activeScene.autoRotate || 0) > 0 ? 1 : 0.5
+                                    }}>rotate_right</span>
 
+                                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                                            {Math.abs(activeScene.autoRotate || 0)} RPM
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                                            {activeScene.autoRotate === 0 ? 'Stopped' : (
+                                                (activeScene.autoRotate || 0) < 0 ? 'Putar Kanan' : 'Putar Kiri'
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Right Icon (Visual) - Associated with Negative Value (Camera Left, Image Right) */}
+                                    <span className="material-icons" style={{
+                                        color: (activeScene.autoRotate || 0) < 0 ? '#10b981' : '#4b5563',
+                                        fontSize: '32px',
+                                        opacity: (activeScene.autoRotate || 0) < 0 ? 1 : 0.5
+                                    }}>rotate_left</span>
+                                </div>
+
+                                <div className="vt-editor__form-group">
+                                    <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Speed & Direction</span>
+                                    </label>
+
+                                    <div className="vt-editor__range-wrapper">
+                                        <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280' }}>rotate_right</span>
+                                        <input
+                                            type="range"
+                                            min="-10"
+                                            max="10"
+                                            step="0.5"
+                                            className="vt-editor__range"
+                                            value={-(activeScene.autoRotate ?? 0)}
+                                            onChange={(e) => {
+                                                const newVal = parseFloat(e.target.value);
+                                                setScenes(prev => prev.map(s =>
+                                                    s.id === activeScene.id ? { ...s, autoRotate: -newVal } : s
+                                                ));
+                                            }}
+                                        />
+                                        <span className="material-icons" style={{ fontSize: '14px', color: '#6b7280' }}>rotate_left</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '8px' }}>
+                                        <button
+                                            onClick={() => setScenes(prev => prev.map(s => s.id === activeScene.id ? { ...s, autoRotate: 2 } : s))}
+                                            style={{ background: 'transparent', border: '1px solid #374151', padding: '4px 8px', borderRadius: '4px', color: '#9ca3af', cursor: 'pointer' }}
+                                        >
+                                            Slow Left
+                                        </button>
+                                        <button
+                                            onClick={() => setScenes(prev => prev.map(s => s.id === activeScene.id ? { ...s, autoRotate: 0 } : s))}
+                                            style={{ background: '#374151', border: 'none', padding: '4px 12px', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                                        >
+                                            Stop
+                                        </button>
+                                        <button
+                                            onClick={() => setScenes(prev => prev.map(s => s.id === activeScene.id ? { ...s, autoRotate: -2 } : s))}
+                                            style={{ background: 'transparent', border: '1px solid #374151', padding: '4px 8px', borderRadius: '4px', color: '#9ca3af', cursor: 'pointer' }}
+                                        >
+                                            Slow Right
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="vt-editor__modal-actions">
+                                <button
+                                    className="vt-editor__btn vt-editor__btn--primary"
+                                    onClick={() => setIsAutoRotateModalOpen(false)}
+                                >
+                                    Selesai
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 4. Right Properties Panel (Not Visible in Preview) */}
+            {!isPreviewMode && (
+                <>
+                    {/* Hotspot Edit Panel */}
+                </>
+            )}
+
+            {/* Hotspot Edit Panel */}
             {!isPreviewMode && selectedHotspot && (
                 <div className="vt-editor__panel">
                     <div className="vt-editor__panel-header">
@@ -1920,14 +2165,19 @@ const VirtualTourEditor: React.FC<VirtualTourEditorProps> = ({ tourId }) => {
                         </button>
                     </div >
                 </div >
-            )
-            }
+            )}
 
             {/* 5. Bottom Filmstrip (Not Visible in Preview) */}
             {
                 !isPreviewMode && (
                     <div className="vt-editor__bottom-bar">
-                        <div className="vt-editor__filmstrip">
+                        <div
+                            className="vt-editor__filmstrip"
+                            onWheel={(e) => {
+                                // Enable horizontal scrolling with mouse wheel
+                                e.currentTarget.scrollLeft += e.deltaY;
+                            }}
+                        >
                             {scenes.map((scene) => (
 
                                 <div

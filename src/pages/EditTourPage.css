@@ -620,10 +620,28 @@
 }
 
 .embed-preview__frame {
-    background: var(--color-gray-100);
-    position: relative;
-    /* Ensure overlay stays within rounded corners */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 1rem;
+    border-radius: 8px;
     overflow: hidden !important;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
+    aspect-ratio: 7/3.5;
+    /* Default Desktop (2:1) */
+}
+
+@media (max-width: 768px) {
+    .embed-preview__frame {
+        aspect-ratio: 3/4;
+        /* Mobile Portrait - maximized for phone screens */
+        padding: 0.5rem;
+        /* Reduce padding on mobile */
+    }
 }
 
 .embed-preview__overlay {

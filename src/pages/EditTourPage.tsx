@@ -612,23 +612,14 @@ const EditTourPage: React.FC = () => {
                                         {/* Preview */}
                                         <div className="embed-preview">
                                             <h4 className="embed-preview__title">Preview</h4>
-                                            <div className="embed-preview__frame" style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                background: '#f3f4f6',
-                                                padding: '1rem',
-                                                borderRadius: '8px',
-                                                overflow: 'auto',
-                                                minHeight: `${embedHeight}px`
-                                            }}>
+                                            <div className="embed-preview__frame">
                                                 {id && id !== 'new' ? (
                                                     <div
                                                         className="portfolio-hero__preview"
                                                         style={{
                                                             position: 'relative',
-                                                            width: embedSize === 'responsive' ? '100%' : `${embedWidth}px`,
-                                                            height: `${embedHeight}px`,
+                                                            width: '100%',
+                                                            height: '100%',
                                                             maxWidth: '100%',
                                                             borderRadius: '16px',
                                                             overflow: 'hidden',
@@ -644,16 +635,18 @@ const EditTourPage: React.FC = () => {
                                                                 position: 'relative'
                                                             }}
                                                         >
-                                                            <iframe
-                                                                src={id === 'demo' ? '/demo?embed=true' : `/tour/${id}?embed=true`}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    border: 'none',
-                                                                    backgroundColor: 'white'
-                                                                }}
-                                                                title="Tour Preview"
-                                                            />
+                                                            {(id && id !== 'new') && (
+                                                                <iframe
+                                                                    src={id === 'demo' ? '/demo?embed=true' : `/tour/${id}?embed=true`}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        border: 'none',
+                                                                        backgroundColor: 'white'
+                                                                    }}
+                                                                    title="Tour Preview"
+                                                                />
+                                                            )}
                                                         </div>
 
                                                         {/* Portfolio Hero Style Overlay */}

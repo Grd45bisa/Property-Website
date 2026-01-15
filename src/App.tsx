@@ -7,13 +7,13 @@ import Navbar from './components/Navbar/Navbar';
 import Hero from './components/Hero/Hero';
 import TrustLogos from './components/TrustLogos/TrustLogos';
 import ProblemSolution from './components/ProblemSolution/ProblemSolution';
-import Portfolio from './components/Portfolio/Portfolio';
+// import Portfolio from './components/Portfolio/Portfolio'; Hide dulu
 import Process from './components/Process/Process';
 import Pricing from './components/Pricing';
 import Footer from './components/Footer/Footer';
 
 // Lazy loaded pages for code splitting (reduces initial bundle size)
-const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+// const PortfolioPage = lazy(() => import('./pages/PortfolioPage')); Hide dulu
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const EditTourPage = lazy(() => import('./pages/EditTourPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -55,7 +55,7 @@ const HomePage: React.FC = () => {
       <TrustLogos />
       <main id="main-content" tabIndex={-1}>
         <ProblemSolution />
-        <Portfolio />
+        {/* <Portfolio /> Hide dulu */}
         <Process />
         <Pricing />
       </main>
@@ -73,7 +73,7 @@ const App: React.FC = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/demo" element={<DemoTourPage />} />
           <Route path="/tour/:id" element={<TourPage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
+          {/* <Route path="/portfolio" element={<PortfolioPage />} /> Hide dulu */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/editor/:id" element={<EditTourPage />} />
           <Route path="/editor/:id/360" element={<EditTourPage />} />
